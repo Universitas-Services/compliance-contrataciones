@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Auditoría · Contrataciones Públicas</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,700;1,9..40,400&family=Fraunces:opsz,wght@9..144,600;9..144,700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --ink: #14241f;
+      --muted: #5a6b64;
+      --paper: #f3efe6;
+      --panel: #faf7f1;
+      --line: #d6cfc2;
+      --accent: #0f6e56;
+      --accent-soft: #d8ebe3;
+      --warn: #9a5b12;
+      --crit: #9b2c2c;
+      --ok: #0f6e56;
+      --bot: #ffffff;
+      --user: #e7f2ed;
+      --shadow: 0 18px 40px rgba(20, 36, 31, 0.08);
+    }
+
+    * { box-sizing: border-box; }
+    html, body { height: 100%; margin: 0; }
+    body {
+      font-family: "DM Sans", system-ui, sans-serif;
+      color: var(--ink);
+      background:
+        radial-gradient(1200px 600px at 10% -10%, #dfece6 0%, transparent 55%),
+        radial-gradient(900px 500px at 100% 0%, #efe6d4 0%, transparent 50%),
+        var(--paper);
+    }
+
+    .shell {
+      max-width: 920px;
+      margin: 0 auto;
+      min-height: 100%;
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      padding: 20px 16px 16px;
+      gap: 14px;
+    }
+
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: end;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    header h1 {
+      font-family: Fraunces, Georgia, serif;
+      font-size: clamp(1.35rem, 2.5vw, 1.85rem);
+      margin: 0 0 4px;
+      letter-spacing: -0.02em;
+    }
+    header p { margin: 0; color: var(--muted); font-size: 0.92rem; }
+
+    .meta {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    .pill {
+      border: 1px solid var(--line);
+      background: var(--panel);
+      border-radius: 999px;
+      padding: 6px 12px;
+      font-size: 0.78rem;
+      color: var(--muted);
+    }
+    .pill strong { color: var(--ink); font-weight: 700; }
+
+    .chat {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 22px;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      min-height: 520px;
+      max-height: calc(100vh - 210px);
+    }
+
+    #messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 22px 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .msg {
+      max-width: min(780px, 92%);
+      padding: 14px 16px;
+      border-radius: 16px;
+      line-height: 1.45;
+      font-size: 0.95rem;
+      white-space: pre-wrap;
+      animation: rise 0.25s ease;
+    }
+    .msg.bot {
+      align-self: flex-start;
+      background: var(--bot);
+      border: 1px solid var(--line);
+    }
+    .msg.user {
+      align-self: flex-end;
+      background: var(--user);
+      border: 1px solid #c7ddd4;
+    }
+    .msg.system {
+      align-self: center;
+      background: transparent;
+      color: var(--muted);
+      font-size: 0.82rem;
+      padding: 4px 8px;
+    }
+    .msg .label {
+      display: block;
+      font-size: 0.72rem;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 6px;
+      font-weight: 700;
+    }
+    .msg.md h1, .msg.md h2, .msg.md h3 {
+      font-family: Fraunces, Georgia, serif;
+      margin: 0.6em 0 0.35em;
+    }
+    .msg.md table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.85rem;
+      margin: 8px 0;
+    }
+    .msg.md th, .msg.md td {
+      border: 1px solid var(--line);
+      padding: 6px 8px;
+      text-align: left;
+    }
+    .obs { margin-top: 8px; display: grid; gap: 6px; }
+    .obs-item {
+      border-left: 3px solid var(--line);
+      padding: 6px 10px;
+      background: #f7f4ee;
+      border-radius: 0 8px 8px 0;
+      font-size: 0.88rem;
+    }
+    .obs-item.critica { border-color: var(--crit); }
+    .obs-item.advertencia { border-color: var(--warn); }
+    .obs-item.info { border-color: var(--accent); }
+
+    .composer {
+      border-top: 1px solid var(--line);
+      padding: 14px;
+      background: #fffdf9;
+      display: grid;
+      gap: 10px;
+    }
+
+    .start-row, .upload-row {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    select, button, input[type="file"] {
+      font: inherit;
+    }
+    select {
+      border: 1px solid var(--line);
+      background: white;
+      border-radius: 12px;
+      padding: 10px 12px;
+      min-width: 160px;
+    }
+    button {
+      border: 0;
+      border-radius: 12px;
+      padding: 10px 16px;
+      background: var(--accent);
+      color: white;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    button:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
+    button.secondary {
+      background: transparent;
+      color: var(--ink);
+      border: 1px solid var(--line);
+    }
+    .hint { color: var(--muted); font-size: 0.82rem; }
+    .file-box {
+      flex: 1;
+      min-width: 220px;
+      border: 1px dashed var(--line);
+      border-radius: 12px;
+      padding: 10px 12px;
+      background: white;
+    }
+    .typing {
+      align-self: flex-start;
+      color: var(--muted);
+      font-size: 0.85rem;
+      padding: 4px 8px;
+    }
+
+    @keyframes rise {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: none; }
+    }
+
+    @media (max-width: 640px) {
+      .chat { min-height: 60vh; max-height: none; }
+      .shell { padding: 12px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <header>
+      <div>
+        <h1>Auditoría de expedientes</h1>
+        <p>Concurso Abierto · Apertura Única — chat de prueba del PoC</p>
+      </div>
+      <div class="meta">
+        <span class="pill">API: <strong id="apiStatus">…</strong></span>
+        <span class="pill">LLM: <strong>Gemini</strong></span>
+        <span class="pill">Estado: <strong id="expEstado">—</strong></span>
+        <span class="pill">Siguiente: <strong id="expNext">—</strong></span>
+      </div>
+    </header>
+
+    <section class="chat" aria-label="Chat de auditoría">
+      <div id="messages"></div>
+
+      <div class="composer">
+        <div id="startPanel" class="start-row">
+          <label class="hint" for="tipo">Tipo de contratación</label>
+          <select id="tipo">
+            <option value="BIENES">BIENES</option>
+            <option value="OBRAS">OBRAS</option>
+            <option value="SERVICIOS">SERVICIOS</option>
+          </select>
+          <button id="btnStart" type="button">Iniciar expediente</button>
+        </div>
+
+        <div id="uploadPanel" class="upload-row" hidden>
+          <div class="file-box">
+            <div class="hint" id="uploadHint">Documento esperado</div>
+            <input id="file" type="file" accept=".pdf,.docx,.xlsx,.png,.jpg,.jpeg,.webp" />
+          </div>
+          <button id="btnUpload" type="button">Analizar documento</button>
+          <button id="btnEstado" class="secondary" type="button">Ver estado</button>
+          <button id="btnInforme" class="secondary" type="button" disabled>Generar informe</button>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    const API_BASE =
+      window.location.protocol === "file:"
+        ? "http://127.0.0.1:8000"
+        : window.location.origin;
+
+    const el = {
+      messages: document.getElementById("messages"),
+      tipo: document.getElementById("tipo"),
+      btnStart: document.getElementById("btnStart"),
+      startPanel: document.getElementById("startPanel"),
+      uploadPanel: document.getElementById("uploadPanel"),
+      file: document.getElementById("file"),
+      btnUpload: document.getElementById("btnUpload"),
+      btnEstado: document.getElementById("btnEstado"),
+      btnInforme: document.getElementById("btnInforme"),
+      uploadHint: document.getElementById("uploadHint"),
+      apiStatus: document.getElementById("apiStatus"),
+      expEstado: document.getElementById("expEstado"),
+      expNext: document.getElementById("expNext"),
+    };
+
+    const state = {
+      expedienteId: null,
+      siguiente: null,
+      estado: null,
+    };
+
+    function addMsg(role, text, { html = false } = {}) {
+      const div = document.createElement("div");
+      div.className = `msg ${role}`;
+      if (role === "bot") {
+        const label = document.createElement("span");
+        label.className = "label";
+        label.textContent = "Asistente";
+        div.appendChild(label);
+      } else if (role === "user") {
+        const label = document.createElement("span");
+        label.className = "label";
+        label.textContent = "Tú";
+        div.appendChild(label);
+      }
+      const body = document.createElement("div");
+      if (html) {
+        body.className = "md";
+        body.innerHTML = text;
+      } else {
+        body.textContent = text;
+      }
+      div.appendChild(body);
+      el.messages.appendChild(div);
+      el.messages.scrollTop = el.messages.scrollHeight;
+      return div;
+    }
+
+    function setTyping(on) {
+      const existing = document.getElementById("typing");
+      if (existing) existing.remove();
+      if (!on) return;
+      const t = document.createElement("div");
+      t.id = "typing";
+      t.className = "typing";
+      t.textContent = "Analizando con Gemini… (puede tardar ~20–60 s)";
+      el.messages.appendChild(t);
+      el.messages.scrollTop = el.messages.scrollHeight;
+    }
+
+    function updateMeta() {
+      el.expEstado.textContent = state.estado || "—";
+      el.expNext.textContent = state.siguiente || "ninguno";
+      el.uploadHint.textContent = state.siguiente
+        ? `Sube: ${state.siguiente}`
+        : "Checklist completo — puedes generar el informe";
+      el.btnInforme.disabled = state.estado !== "COMPLETO";
+      el.btnUpload.disabled = !state.siguiente;
+    }
+
+    function renderAnalisis(doc) {
+      const obsHtml = (doc.observaciones || [])
+        .map(
+          (o) =>
+            `<div class="obs-item ${o.severidad}"><strong>${o.severidad}</strong> — ${escapeHtml(
+              o.descripcion
+            )}</div>`
+        )
+        .join("");
+      const html = `
+        <strong>${escapeHtml(doc.tipo)}</strong> · ${escapeHtml(doc.nombre_archivo)}<br/>
+        Cumple: <strong>${doc.cumple ? "sí" : "no"}</strong><br/><br/>
+        ${escapeHtml(doc.resumen || "")}
+        ${obsHtml ? `<div class="obs">${obsHtml}</div>` : ""}
+      `;
+      addMsg("bot", html, { html: true });
+    }
+
+    function escapeHtml(s) {
+      return String(s)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;");
+    }
+
+    function simpleMarkdown(md) {
+      // Render mínimo: headings, bold, code fences, tablas pipes, párrafos
+      let html = escapeHtml(md);
+      html = html.replace(/^### (.*)$/gm, "<h3>$1</h3>");
+      html = html.replace(/^## (.*)$/gm, "<h2>$1</h2>");
+      html = html.replace(/^# (.*)$/gm, "<h1>$1</h1>");
+      html = html.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
+      html = html.replace(/`([^`]+)`/g, "<code>$1</code>");
+      // tablas markdown simples
+      html = html.replace(/(?:^\|.+\|\n?)+/gm, (block) => {
+        const rows = block.trim().split("\n").filter(Boolean);
+        if (rows.length < 2) return block;
+        const parse = (row) =>
+          row
+            .split("|")
+            .slice(1, -1)
+            .map((c) => c.trim());
+        const head = parse(rows[0]);
+        const bodyRows = rows.slice(2).map(parse);
+        const thead = `<tr>${head.map((c) => `<th>${c}</th>`).join("")}</tr>`;
+        const tbody = bodyRows
+          .map((r) => `<tr>${r.map((c) => `<td>${c}</td>`).join("")}</tr>`)
+          .join("");
+        return `<table><thead>${thead}</thead><tbody>${tbody}</tbody></table>`;
+      });
+      html = html.replace(/\n\n/g, "<br/><br/>").replace(/\n/g, "<br/>");
+      return html;
+    }
+
+    async function checkHealth() {
+      try {
+        const r = await fetch(`${API_BASE}/health`);
+        const data = await r.json();
+        el.apiStatus.textContent = data.status === "ok" ? "ok" : "error";
+      } catch {
+        el.apiStatus.textContent = "offline";
+      }
+    }
+
+    el.btnStart.addEventListener("click", async () => {
+      el.btnStart.disabled = true;
+      setTyping(true);
+      try {
+        const r = await fetch(`${API_BASE}/api/expedientes`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ tipo_contratacion: el.tipo.value }),
+        });
+        const data = await r.json();
+        if (!r.ok) throw new Error(JSON.stringify(data));
+        state.expedienteId = data.expediente.id;
+        state.estado = data.expediente.estado;
+        state.siguiente = data.expediente.siguiente_documento_esperado;
+        addMsg("user", `Iniciar expediente · ${el.tipo.value}`);
+        addMsg("bot", data.mensaje);
+        addMsg(
+          "system",
+          `Expediente ${state.expedienteId.slice(0, 8)}… listo`
+        );
+        el.startPanel.hidden = true;
+        el.uploadPanel.hidden = false;
+        updateMeta();
+      } catch (err) {
+        addMsg("bot", `No pude crear el expediente.\n${err.message}`);
+        el.btnStart.disabled = false;
+      } finally {
+        setTyping(false);
+      }
+    });
+
+    el.btnUpload.addEventListener("click", async () => {
+      const file = el.file.files?.[0];
+      if (!file || !state.expedienteId || !state.siguiente) {
+        addMsg("system", "Selecciona un archivo primero.");
+        return;
+      }
+      el.btnUpload.disabled = true;
+      addMsg("user", `Subí ${file.name} como ${state.siguiente}`);
+      setTyping(true);
+      try {
+        const form = new FormData();
+        form.append("archivo", file);
+        form.append("tipo_documento", state.siguiente);
+        const url = `${API_BASE}/api/expedientes/${state.expedienteId}/documentos?tipo_documento=${encodeURIComponent(state.siguiente)}`;
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), 120000);
+        let r;
+        try {
+          r = await fetch(url, { method: "POST", body: form, signal: controller.signal });
+        } finally {
+          clearTimeout(timer);
+        }
+        const data = await r.json().catch(() => ({}));
+        if (!r.ok) throw new Error(typeof data.detail === "string" ? data.detail : JSON.stringify(data.detail || data));
+        renderAnalisis(data.documento);
+        state.siguiente = data.siguiente_documento_esperado;
+        state.estado = state.siguiente ? "EN_PROGRESO" : "COMPLETO";
+        if (!state.siguiente) {
+          addMsg("bot", "Checklist completo. Ya puedes generar el informe final.");
+        } else {
+          addMsg("bot", `Siguiente documento esperado:\n${state.siguiente}`);
+        }
+        updateMeta();
+        el.file.value = "";
+      } catch (err) {
+        const msg =
+          err.name === "AbortError"
+            ? "Se agotó el tiempo de espera (2 min). Reintenta; si persiste, revisa la API key de Gemini."
+            : err.message;
+        addMsg("bot", `Error al analizar:\n${msg}`);
+      } finally {
+        setTyping(false);
+        el.btnUpload.disabled = !state.siguiente;
+      }
+    });
+
+    el.btnEstado.addEventListener("click", async () => {
+      if (!state.expedienteId) return;
+      setTyping(true);
+      try {
+        const r = await fetch(`${API_BASE}/api/expedientes/${state.expedienteId}/estado`);
+        const data = await r.json();
+        if (!r.ok) throw new Error(JSON.stringify(data));
+        state.estado = data.estado;
+        state.siguiente = data.siguiente_documento_esperado;
+        updateMeta();
+        const lines = [
+          `Estado: ${data.estado}`,
+          `Documentos analizados: ${data.documentos_analizados.length}`,
+          `Siguiente: ${data.siguiente_documento_esperado || "ninguno"}`,
+          "",
+          ...data.documentos_analizados.map(
+            (d) => `• ${d.tipo} — cumple=${d.cumple} — ${d.nombre_archivo}`
+          ),
+        ];
+        addMsg("bot", lines.join("\n"));
+      } catch (err) {
+        addMsg("bot", `Error al consultar estado:\n${err.message}`);
+      } finally {
+        setTyping(false);
+      }
+    });
+
+    el.btnInforme.addEventListener("click", async () => {
+      if (!state.expedienteId) return;
+      el.btnInforme.disabled = true;
+      setTyping(true);
+      try {
+        const r = await fetch(`${API_BASE}/api/expedientes/${state.expedienteId}/informe`, {
+          method: "POST",
+        });
+        const data = await r.json();
+        if (!r.ok) throw new Error(typeof data.detail === "string" ? data.detail : JSON.stringify(data.detail || data));
+        addMsg("bot", simpleMarkdown(data.informe_markdown), { html: true });
+      } catch (err) {
+        addMsg("bot", `Error al generar informe:\n${err.message}`);
+      } finally {
+        setTyping(false);
+        el.btnInforme.disabled = state.estado !== "COMPLETO";
+      }
+    });
+
+    addMsg(
+      "bot",
+      "Hola. Soy el asistente de auditoría del PoC.\n\nElige el tipo de contratación e inicia un expediente. Luego te iré pidiendo los documentos del checklist en orden."
+    );
+    checkHealth();
+  </script>
+</body>
+</html>

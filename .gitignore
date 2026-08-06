@@ -1,0 +1,35 @@
+# Secrets — nunca subir claves
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+dist/
+build/
+
+# Datos locales de sesiones (JSON); en producción irá a BD
+data/
+
+# Docs internos de prompts (el código en app/agents ya tiene los prompts)
+PROMPTS.md
+
+# Fixtures / temporales de desarrollo
+scripts/fixtures/
+*.log
+.tmp/
+tmp/
+
+# OS / IDE
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
