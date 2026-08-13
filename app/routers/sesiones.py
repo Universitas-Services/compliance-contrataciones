@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import json
+import math
 import tempfile
 import uuid
 from datetime import datetime, timezone
@@ -9,13 +11,19 @@ from pathlib import Path
 
 from fastapi import APIRouter, File, Form, HTTPException, Query, UploadFile
 from fastapi.responses import Response
-from openai import APIError, APITimeoutError, RateLimitError
+from openai import APIConnectionError, APIError, APITimeoutError, RateLimitError
 
 from app.agents.cuestionario import (
-    mensaje_pregunta_actual,
+    aplicar_rubrica_agente,
+    resumen_rubrica_chat,
     sincronizar_informe_documento,
 )
 from app.agents.extractor import procesar_archivo
+from app.agents.knowledge import etiqueta_modalidad
+from app.agents.knowledge.cuestionarios_loader import (
+    cargar_cuestionario,
+    formato_cuestionario_compacto,
+)
 from app.agents.modalities import get_modalidad_agent
 from app.agents.orchestrator import crear_sesion, ejecutar_dictamen_juridico, procesar_mensaje
 from app.agents.report_agent import (
@@ -42,22 +50,71 @@ from app.models.schemas import (
     DocumentoAnalizado,
     EstadoSesion,
     ExtraccionMeta,
+    HechosClave,
     InformeMarkdownResponse,
     JuridicoRequest,
     JuridicoResponse,
     MensajeRequest,
     MensajeResponse,
+    Modalidad,
+    MontoClave,
+    NivelRiesgo,
     Observacion,
+    PlazoClave,
     PreguntaSeguimiento,
     RespuestasDocumentoRequest,
     SesionCompliance,
+    SesionesListaResponse,
     SesionResumen,
+    TipoContratacion,
     TipoDocumento,
 )
 
 router = APIRouter(prefix="/sesiones", tags=["sesiones"])
 
 _SEVERIDADES = {"info", "advertencia", "critica"}
+
+# Errores de proveedor LLM → HTTP 502/504 (no 500 opaco / Failed to fetch)
+_LLM_ERRORS = (
+    APITimeoutError,
+    RateLimitError,
+    APIError,
+    APIConnectionError,
+    RuntimeError,
+)
+
+
+def _http_from_llm(exc: BaseException) -> HTTPException:
+    """Mapea fallos del LLM a respuestas HTTP con detail usable en el front."""
+    if isinstance(exc, APITimeoutError):
+        return HTTPException(status_code=504, detail="Timeout del modelo LLM.")
+    if isinstance(exc, RateLimitError):
+        return HTTPException(
+            status_code=429,
+            detail="Cuota o rate limit del proveedor LLM agotada. Reintenta más tarde o usa el fallback.",
+        )
+    msg = str(exc).strip() or type(exc).__name__
+    # RuntimeError dual-fail ya viene acortado desde llm_client
+    if len(msg) > 500:
+        msg = msg[:500] + "…"
+    return HTTPException(status_code=502, detail=f"Error LLM: {msg}")
+
+
+def _as_bool(val: object, *, default: bool = True) -> bool:
+    """Parsea bool tolerante (evita que bool('false') == True)."""
+    if val is None:
+        return default
+    if isinstance(val, bool):
+        return val
+    if isinstance(val, (int, float)):
+        return bool(val)
+    if isinstance(val, str):
+        s = val.strip().lower()
+        if s in {"true", "1", "yes", "si", "sí", "verdadero"}:
+            return True
+        if s in {"false", "0", "no", "falso", ""}:
+            return False
+    return default
 
 
 def _require_sesion(sesion_id: str) -> SesionCompliance:
@@ -76,18 +133,39 @@ def _parse_observaciones(raw: object) -> list[Observacion]:
             continue
         severidad = str(item.get("severidad", "advertencia")).lower()
         if severidad not in _SEVERIDADES:
-            severidad = "advertencia"
-        descripcion = str(item.get("descripcion", "")).strip()
+            # Mapear criticidad del cuestionario oficial si viene así
+            crit = str(item.get("rango_criticidad") or "").upper()
+            if "5" in crit or "CRÍTICO" in crit or "CRITICO" in crit:
+                severidad = "critica"
+            elif "3" in crit or "RELEVANTE" in crit:
+                severidad = "advertencia"
+            elif "1" in crit or "ORDINARIA" in crit:
+                severidad = "info"
+            else:
+                severidad = "advertencia"
+        descripcion = str(
+            item.get("descripcion") or item.get("pregunta_evaluada") or ""
+        ).strip()
         if not descripcion:
             continue
-        subs = item.get("subsanacion")
+        subs = item.get("subsanacion") or item.get("accion_legal")
         ref = item.get("ref")
+
+        def _opt(key: str) -> str | None:
+            v = item.get(key)
+            return str(v).strip() if v not in (None, "") else None
+
         out.append(
             Observacion(
                 severidad=severidad,  # type: ignore[arg-type]
                 descripcion=descripcion,
                 subsanacion=str(subs).strip() if subs else None,
                 ref=str(ref).strip() if ref else None,
+                codigo_pregunta=_opt("codigo_pregunta"),
+                fundamento_legal=_opt("fundamento_legal"),
+                rango_criticidad=_opt("rango_criticidad"),
+                accion_legal=_opt("accion_legal"),
+                advertencia_gerencia=_opt("advertencia_gerencia"),
             )
         )
     return out
@@ -130,12 +208,99 @@ def _asegurar_obs_tipo_incorrecto(
     return observaciones
 
 
+def _norm_nomen(s: str) -> str:
+    return "".join(ch for ch in (s or "").upper() if ch.isalnum() or ch in "-/")
+
+
+def _asegurar_obs_nomenclatura(
+    observaciones: list[Observacion],
+    *,
+    nomenclatura_sesion: str | None,
+    nomenclatura_encontrada: str | None,
+) -> list[Observacion]:
+    """Si el documento trae otra nomenclatura clara, fuerza observación."""
+    ses = (nomenclatura_sesion or "").strip()
+    hall = (nomenclatura_encontrada or "").strip()
+    if not ses or not hall:
+        return observaciones
+    if _norm_nomen(ses) == _norm_nomen(hall):
+        return observaciones
+    # Si una contiene a la otra (variantes cortas), no forzar
+    ns, nh = _norm_nomen(ses), _norm_nomen(hall)
+    if ns and nh and (ns in nh or nh in ns):
+        return observaciones
+    clave = "nomenclatura"
+    if any(clave in o.descripcion.lower() for o in observaciones):
+        return observaciones
+    observaciones = list(observaciones)
+    observaciones.insert(
+        0,
+        Observacion(
+            severidad="critica",
+            descripcion=(
+                f"La nomenclatura del documento («{hall}») no coincide con la de "
+                f"la sesión («{ses}»)."
+            ),
+            subsanacion=(
+                "Verifica que el archivo pertenezca a este expediente o corrige "
+                "la nomenclatura de la sesión si corresponde."
+            ),
+        ),
+    )
+    return observaciones
+
+
+def _fecha_inicio_sesion(sesion: SesionCompliance) -> datetime | None:
+    fi = getattr(sesion, "fecha_inicio", None)
+    if fi is not None:
+        return fi
+    if sesion.historial:
+        return sesion.historial[0].timestamp
+    if sesion.documentos_analizados:
+        return sesion.documentos_analizados[0].fecha_analisis
+    return None
+
+
+def _calcular_riesgo(sesion: SesionCompliance) -> NivelRiesgo:
+    tiene_critica = False
+    tiene_advertencia = False
+    for d in sesion.documentos_analizados:
+        if getattr(d, "tipo_coincide", True) is False:
+            tiene_critica = True
+        for o in d.observaciones:
+            if o.severidad == "critica":
+                tiene_critica = True
+            elif o.severidad == "advertencia":
+                tiene_advertencia = True
+    if tiene_critica:
+        return NivelRiesgo.RIESGO_ALTO
+    if tiene_advertencia:
+        return NivelRiesgo.OBSERVACIONES
+    return NivelRiesgo.SIN_HALLAZGOS
+
+
 def _sesion_resumen(sesion: SesionCompliance) -> SesionResumen:
     hint = None
     if sesion.historial:
         hint = sesion.historial[-1].timestamp.isoformat()
     elif sesion.documentos_analizados:
         hint = sesion.documentos_analizados[-1].fecha_analisis.isoformat()
+
+    docs_ok = [
+        d
+        for d in sesion.documentos_analizados
+        if getattr(d, "tipo_coincide", True) is not False
+    ]
+    # Un tipo correcto por slot (si hay varios intentos del mismo tipo, cuenta 1)
+    tipos_ok = {d.tipo for d in docs_ok}
+    docs_revisados = len(tipos_ok)
+    docs_totales = len(sesion.checklist_slots)
+    if docs_totales > 0:
+        progreso_pct = min(100, int(round(100 * docs_revisados / docs_totales)))
+    else:
+        progreso_pct = 0
+
+    fi = _fecha_inicio_sesion(sesion)
     return SesionResumen(
         id=sesion.id,
         nomenclatura=sesion.nomenclatura,
@@ -144,17 +309,174 @@ def _sesion_resumen(sesion: SesionCompliance) -> SesionResumen:
         estado=sesion.estado,
         docs_count=len(sesion.documentos_analizados),
         updated_hint=hint,
+        fecha_inicio=fi.isoformat() if fi else None,
+        docs_revisados=docs_revisados,
+        docs_totales=docs_totales,
+        progreso_pct=progreso_pct,
+        riesgo=_calcular_riesgo(sesion),
     )
 
 
-@router.get("/", response_model=list[SesionResumen])
-def listar_sesiones() -> list[SesionResumen]:
-    """Lista todas las sesiones en memoria (panel izquierdo del frontend)."""
+def _parse_hechos_clave(raw: object) -> HechosClave:
+    if not isinstance(raw, dict):
+        return HechosClave()
+    montos: list[MontoClave] = []
+    for m in raw.get("montos") or []:
+        if not isinstance(m, dict):
+            continue
+        etiqueta = str(m.get("etiqueta") or "").strip()
+        if not etiqueta:
+            continue
+        valor_num = m.get("valor_num")
+        try:
+            vn = float(valor_num) if valor_num is not None and valor_num != "" else None
+        except (TypeError, ValueError):
+            vn = None
+        montos.append(
+            MontoClave(
+                etiqueta=etiqueta,
+                texto=str(m.get("texto") or "").strip(),
+                valor_num=vn,
+                moneda=str(m["moneda"]).strip() if m.get("moneda") else None,
+            )
+        )
+    plazos: list[PlazoClave] = []
+    for p in raw.get("plazos") or []:
+        if not isinstance(p, dict):
+            continue
+        etiqueta = str(p.get("etiqueta") or "").strip()
+        if not etiqueta:
+            continue
+        plazos.append(
+            PlazoClave(
+                etiqueta=etiqueta,
+                texto=str(p.get("texto") or "").strip(),
+            )
+        )
+    partes = [
+        str(x).strip()
+        for x in (raw.get("partes") or [])
+        if str(x).strip()
+    ]
+    nom = raw.get("nomenclatura_encontrada")
+    otros = [
+        str(x).strip()
+        for x in (raw.get("otros") or [])
+        if str(x).strip()
+    ]
+    return HechosClave(
+        montos=montos,
+        plazos=plazos,
+        partes=partes,
+        nomenclatura_encontrada=str(nom).strip() if nom not in (None, "") else None,
+        otros=otros,
+    )
+
+
+def _formatear_hechos_clave(hc: HechosClave) -> str:
+    partes: list[str] = []
+    if hc.montos:
+        montos_txt = "; ".join(
+            (
+                f"{m.etiqueta}={m.valor_num}"
+                + (f" {m.moneda}" if m.moneda else "")
+                + (f" ({m.texto})" if m.texto and m.valor_num is None else "")
+            ).strip()
+            for m in hc.montos
+        )
+        partes.append(f"montos=[{montos_txt}]")
+    if hc.plazos:
+        plazos_txt = "; ".join(f"{p.etiqueta}={p.texto}" for p in hc.plazos)
+        partes.append(f"plazos=[{plazos_txt}]")
+    if hc.partes:
+        partes.append(f"partes={hc.partes}")
+    if hc.nomenclatura_encontrada:
+        partes.append(f"nomenclatura={hc.nomenclatura_encontrada}")
+    if hc.otros:
+        partes.append(f"otros={hc.otros}")
+    return "; ".join(partes) if partes else "(sin hechos clave)"
+
+
+def _memoria_expediente(sesion: SesionCompliance) -> str:
+    """Bloque de memoria estructurada para cross-validation en el Analista."""
+    lineas: list[str] = ["MEMORIA DEL EXPEDIENTE (documentos con identidad correcta):"]
+    hubo = False
+    for d in sesion.documentos_analizados:
+        if getattr(d, "tipo_coincide", True) is False:
+            continue
+        hubo = True
+        hc = d.hechos_clave if isinstance(d.hechos_clave, HechosClave) else HechosClave()
+        lineas.append(
+            f"- {d.tipo.value} ({d.nombre_archivo}): {_formatear_hechos_clave(hc)}; "
+            f"cumple={d.cumple}; resumen={d.resumen[:200]}"
+        )
+    if not hubo:
+        lineas.append("- (aún no hay documentos válidos previos)")
+    lineas.append(
+        "Instrucción: si el documento ACTUAL contradice montos, plazos, "
+        "nomenclatura o partes de la memoria, emite observación critica o "
+        "advertencia explícita citando el documento previo en 'ref'."
+    )
+    return "\n".join(lineas)
+
+
+def _coincide_busqueda(sesion: SesionCompliance, q: str) -> bool:
+    """Match case-insensitive en nomenclatura, modalidad (código/etiqueta) y tipo."""
+    needle = q.strip().lower()
+    if not needle:
+        return True
+    haystack: list[str] = []
+    if sesion.nomenclatura:
+        haystack.append(sesion.nomenclatura)
+    if sesion.modalidad:
+        haystack.append(sesion.modalidad.value)
+        haystack.append(etiqueta_modalidad(sesion.modalidad))
+    if sesion.tipo_contratacion:
+        haystack.append(sesion.tipo_contratacion.value)
+    return any(needle in part.lower() for part in haystack)
+
+
+@router.get("/", response_model=SesionesListaResponse)
+def listar_sesiones(
+    page: int = Query(default=1, ge=1, description="Número de página"),
+    page_size: int = Query(default=20, ge=1, le=100, description="Tamaño de página"),
+    q: str | None = Query(
+        default=None,
+        description="Búsqueda libre en nomenclatura, modalidad o tipo",
+    ),
+    modalidad: Modalidad | None = Query(default=None),
+    tipo_contratacion: TipoContratacion | None = Query(default=None),
+    estado: EstadoSesion | None = Query(default=None),
+) -> SesionesListaResponse:
+    """Lista sesiones con paginación, búsqueda (q) y filtros exactos."""
     sesiones = session_store.listar_sesiones()
-    # Más recientes primero según updated_hint / historial
-    resumenes = [_sesion_resumen(s) for s in sesiones]
+    filtradas: list[SesionCompliance] = []
+    for s in sesiones:
+        if modalidad is not None and s.modalidad != modalidad:
+            continue
+        if tipo_contratacion is not None and s.tipo_contratacion != tipo_contratacion:
+            continue
+        if estado is not None and s.estado != estado:
+            continue
+        if q and not _coincide_busqueda(s, q):
+            continue
+        filtradas.append(s)
+
+    resumenes = [_sesion_resumen(s) for s in filtradas]
     resumenes.sort(key=lambda s: s.updated_hint or "", reverse=True)
-    return resumenes
+
+    total = len(resumenes)
+    pages = max(1, math.ceil(total / page_size)) if total else 0
+    # Si piden una página fuera de rango, devolver vacía pero con meta correcta
+    start = (page - 1) * page_size
+    items = resumenes[start : start + page_size]
+    return SesionesListaResponse(
+        items=items,
+        total=total,
+        page=page,
+        page_size=page_size,
+        pages=pages,
+    )
 
 
 @router.post("/", response_model=CrearSesionResponse)
@@ -174,8 +496,8 @@ def enviar_mensaje(sesion_id: str, body: MensajeRequest) -> MensajeResponse:
         sesion, respuesta = procesar_mensaje(sesion_id, body.mensaje)
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
-    except (APITimeoutError, RateLimitError, APIError) as exc:
-        raise HTTPException(status_code=502, detail=f"Error LLM: {exc}") from exc
+    except _LLM_ERRORS as exc:
+        raise _http_from_llm(exc) from exc
     return MensajeResponse(sesion=sesion, respuesta=respuesta)
 
 
@@ -223,7 +545,26 @@ async def cargar_documento(
 
     agent = get_modalidad_agent(sesion.modalidad, sesion.tipo_contratacion)
     requisitos = agent.requisitos(tipo)
-    preguntas = agent.preguntas(tipo)
+    cuest = cargar_cuestionario(sesion.modalidad, tipo)
+    preguntas = (
+        [it.texto for it in cuest.items]
+        if cuest and cuest.items
+        else agent.preguntas(tipo)
+    )
+    # Compacto para el LLM (el MD completo hincha el prompt y trunca el JSON)
+    cuestionario_md = formato_cuestionario_compacto(cuest) if cuest and cuest.items else None
+    cuestionario_items = (
+        [
+            {
+                "codigo": it.codigo,
+                "texto": it.texto,
+                "rango_criticidad": it.rango_criticidad,
+            }
+            for it in cuest.items
+        ]
+        if cuest and cuest.items
+        else None
+    )
 
     nombre_seguro = sanitizar_nombre_archivo(archivo.filename)
     try:
@@ -253,63 +594,106 @@ async def cargar_documento(
                 tmp.write(chunk)
 
         procesado = procesar_archivo(tmp_path, nombre_seguro)
-        docs_previos = "\n".join(
-            f"- {d.tipo.value} | {d.nombre_archivo} | cumple={d.cumple} | {d.resumen[:160]}"
-            for d in sesion.documentos_analizados
-        )
+        docs_previos = _memoria_expediente(sesion)
         analisis = analizar_documento(
             tipo,
             procesado,
             requisitos,
             system_experto=agent.system_prompt_experto(),
             preguntas_preestablecidas=preguntas,
+            cuestionario_markdown=cuestionario_md,
+            cuestionario_items=cuestionario_items,
             modalidad=sesion.modalidad,
             nomenclatura=sesion.nomenclatura,
             docs_previos_resumen=docs_previos,
+            nombre_archivo=nombre_seguro,
+            tipo_contratacion=(
+                sesion.tipo_contratacion.value if sesion.tipo_contratacion else ""
+            ),
         )
 
         preg_objs: list[PreguntaSeguimiento] = []
-        tipo_coincide = analisis.get("tipo_coincide")
-        if tipo_coincide is None:
-            tipo_coincide = True
-        tipo_coincide = bool(tipo_coincide)
+        tipo_coincide = _as_bool(analisis.get("tipo_coincide"), default=True)
         tipo_detectado_raw = analisis.get("tipo_detectado")
         tipo_detectado = (
             str(tipo_detectado_raw).strip() if tipo_detectado_raw not in (None, "") else None
         )
 
-        # Cuestionario solo si el archivo es del tipo declarado
+        # Rúbrica precargada: el Analista responde contra el documento (no el usuario)
         if tipo_coincide:
             seen_q: set[str] = set()
-            for texto in preguntas:
-                t = str(texto).strip()
-                if not t or t in seen_q:
-                    continue
-                seen_q.add(t)
-                preg_objs.append(
-                    PreguntaSeguimiento(id=f"q{len(preg_objs)+1}", texto=t)
-                )
-            # Añade sugerencias del modelo que no dupliquen el catálogo
-            extra = analisis.get("preguntas_sugeridas") or []
-            if isinstance(extra, list):
-                for texto in extra:
+            if cuest and cuest.items:
+                for it in cuest.items:
+                    t = it.texto.strip()
+                    if not t or t in seen_q:
+                        continue
+                    seen_q.add(t)
+                    preg_objs.append(
+                        PreguntaSeguimiento(
+                            id=f"q{len(preg_objs) + 1}",
+                            texto=t,
+                            codigo_pregunta=it.codigo,
+                            fundamento_legal=it.fundamento_legal,
+                            rango_criticidad=it.rango_criticidad,
+                            accion_legal=it.accion_legal,
+                            advertencia_gerencia=it.advertencia_gerencia,
+                        )
+                    )
+            else:
+                for texto in preguntas:
                     t = str(texto).strip()
                     if not t or t in seen_q:
                         continue
                     seen_q.add(t)
                     preg_objs.append(
-                        PreguntaSeguimiento(id=f"q{len(preg_objs)+1}", texto=t)
+                        PreguntaSeguimiento(id=f"q{len(preg_objs) + 1}", texto=t)
                     )
+            aplicar_rubrica_agente(
+                preg_objs,
+                analisis.get("rubrica") or analisis.get("respuestas_cuestionario"),
+            )
 
-        observaciones = _parse_observaciones(analisis.get("observaciones"))
+        observaciones = _parse_observaciones(
+            analisis.get("observaciones") or analisis.get("hallazgos")
+        )
+        estatus_raw = str(analisis.get("estatus_global") or "").strip()
+        estatus_global = None
+        for cand in ("Verde", "Amarillo", "Rojo"):
+            if estatus_raw.lower() == cand.lower():
+                estatus_global = cand
+                break
         cumple = bool(analisis.get("cumple", False))
+        if estatus_global == "Verde":
+            cumple = True
+        elif estatus_global in {"Amarillo", "Rojo"}:
+            cumple = False
         if not tipo_coincide:
             cumple = False
+            estatus_global = "Rojo"
             observaciones = _asegurar_obs_tipo_incorrecto(
                 observaciones,
                 tipo_declarado=tipo,
                 tipo_detectado=tipo_detectado,
             )
+
+        hechos_raw = analisis.get("hechos_clave") or {}
+        nom_doc = None
+        if isinstance(hechos_raw, dict):
+            raw_nom = hechos_raw.get("nomenclatura_encontrada")
+            if raw_nom not in (None, ""):
+                nom_doc = str(raw_nom).strip()
+        observaciones = _asegurar_obs_nomenclatura(
+            observaciones,
+            nomenclatura_sesion=sesion.nomenclatura,
+            nomenclatura_encontrada=nom_doc,
+        )
+        if any(
+            "nomenclatura" in o.descripcion.lower() and o.severidad == "critica"
+            for o in observaciones
+        ):
+            if estatus_global != "Rojo":
+                estatus_global = "Rojo"
+            cumple = False
 
         canon = procesado.get("canonico") or {}
         extraccion = ExtraccionMeta(
@@ -338,6 +722,8 @@ async def cargar_documento(
             tipo_detectado=tipo_detectado,
             texto_extraido=texto_ext,
             extraccion=extraccion,
+            hechos_clave=_parse_hechos_clave(analisis.get("hechos_clave")),
+            estatus_global=estatus_global,  # type: ignore[arg-type]
         )
         if preg_objs:
             sincronizar_informe_documento(documento)
@@ -350,30 +736,32 @@ async def cargar_documento(
                     slot.auditado = True
 
         pendientes = _slots_pendientes(sesion)
+        sesion.documento_en_cuestionario = None
         if not tipo_coincide:
-            sesion.documento_en_cuestionario = None
+            documento.preguntas_seguimiento = []
             msg = (
                 f"Documento incorrecto: declaraste {tipo.value}, pero el archivo "
                 f"parece ser {tipo_detectado or 'de otro tipo'}. "
-                "No se marca el slot como auditado y no se inicia cuestionario. "
-                "Vuelve a subir el archivo correcto o elige el tipo adecuado. "
+                "El slot NO queda marcado como auditado: puedes volver a subir "
+                f"el «{tipo.value}» correcto, o cargar este archivo eligiendo "
+                "el tipo que realmente es. "
                 f"Informe en /documentos/{documento.id}/informe."
             )
         else:
+            estatus_txt = documento.estatus_global or (
+                "Verde" if documento.cumple else "Amarillo"
+            )
             msg = (
-                f"Documento {tipo.value} analizado (cumple={documento.cumple}). "
-                f"Informe disponible en /documentos/{documento.id}/informe "
+                f"Revisión finalizada de «{nombre_seguro}» "
+                f"(estatus {estatus_txt}). "
+                f"Informe en /documentos/{documento.id}/informe "
                 f"(también .pdf / .docx)."
             )
             if pendientes:
-                msg += f" Slots sugeridos aún sin auditar: {len(pendientes)}."
-            if preg_objs:
-                sesion.documento_en_cuestionario = documento.id
-                msg += (
-                    "\n\nInicio el cuestionario de seguimiento de este documento. "
-                    "Responde en el chat (o en el panel de preguntas).\n\n"
-                    + mensaje_pregunta_actual(documento)
-                )
+                msg += f" Documentos aún sin revisar: {len(pendientes)}."
+            rubrica_txt = resumen_rubrica_chat(documento)
+            if rubrica_txt:
+                msg += "\n\n" + rubrica_txt
 
         session_store.guardar_sesion(sesion.id, sesion)
         return AnalisisDocumentoResponse(
@@ -381,12 +769,17 @@ async def cargar_documento(
             mensaje=msg,
             slots_pendientes=pendientes,
         )
-    except APITimeoutError as exc:
-        raise HTTPException(status_code=504, detail="Timeout del modelo LLM.") from exc
-    except RateLimitError as exc:
-        raise HTTPException(status_code=429, detail="Rate limit del proveedor LLM.") from exc
-    except APIError as exc:
-        raise HTTPException(status_code=502, detail=f"Error LLM: {exc.message or exc}") from exc
+    except _LLM_ERRORS as exc:
+        raise _http_from_llm(exc) from exc
+    except json.JSONDecodeError as exc:
+        raise HTTPException(
+            status_code=502,
+            detail=(
+                "El modelo devolvió una respuesta incompleta al analizar el "
+                "documento. Reintenta la carga; si persiste, prueba con un "
+                "archivo más liviano."
+            ),
+        ) from exc
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     finally:
@@ -406,12 +799,8 @@ def revision_juridica(sesion_id: str, body: JuridicoRequest) -> JuridicoResponse
         )
     except ValueError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
-    except APITimeoutError as exc:
-        raise HTTPException(status_code=504, detail="Timeout del modelo LLM.") from exc
-    except RateLimitError as exc:
-        raise HTTPException(status_code=429, detail="Rate limit del proveedor LLM.") from exc
-    except APIError as exc:
-        raise HTTPException(status_code=502, detail=f"Error LLM: {exc.message or exc}") from exc
+    except _LLM_ERRORS as exc:
+        raise _http_from_llm(exc) from exc
 
     session_store.guardar_sesion(sesion.id, sesion)
     return JuridicoResponse(
@@ -461,7 +850,8 @@ def responder_preguntas(
     doc_id: str,
     body: RespuestasDocumentoRequest,
 ) -> DocumentoAnalizado:
-    from app.agents.cuestionario import pregunta_pendiente, registrar_respuesta
+    """Compat: permite corregir ítems de rúbrica; ya no abre modo Q&A de chat."""
+    from app.agents.cuestionario import registrar_respuesta
 
     sesion = _require_sesion(sesion_id)
     doc = next((d for d in sesion.documentos_analizados if d.id == doc_id), None)
@@ -477,11 +867,7 @@ def responder_preguntas(
             )
 
     sincronizar_informe_documento(doc)
-    if pregunta_pendiente(doc) is None:
-        if sesion.documento_en_cuestionario == doc.id:
-            sesion.documento_en_cuestionario = None
-    else:
-        sesion.documento_en_cuestionario = doc.id
+    sesion.documento_en_cuestionario = None
 
     session_store.guardar_sesion(sesion.id, sesion)
     return doc
@@ -535,8 +921,8 @@ def get_informe_global(
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except InformeNoDisponibleError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
-    except (APITimeoutError, RateLimitError, APIError) as exc:
-        raise HTTPException(status_code=502, detail=f"Error LLM: {exc}") from exc
+    except _LLM_ERRORS as exc:
+        raise _http_from_llm(exc) from exc
     return InformeMarkdownResponse(informe_markdown=md)
 
 
@@ -551,8 +937,8 @@ def get_informe_global_pdf(
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except InformeNoDisponibleError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
-    except (APITimeoutError, RateLimitError, APIError) as exc:
-        raise HTTPException(status_code=502, detail=f"Error LLM: {exc}") from exc
+    except _LLM_ERRORS as exc:
+        raise _http_from_llm(exc) from exc
     return Response(
         content=data,
         media_type=media,
@@ -571,8 +957,8 @@ def get_informe_global_docx(
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except InformeNoDisponibleError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
-    except (APITimeoutError, RateLimitError, APIError) as exc:
-        raise HTTPException(status_code=502, detail=f"Error LLM: {exc}") from exc
+    except _LLM_ERRORS as exc:
+        raise _http_from_llm(exc) from exc
     return Response(
         content=data,
         media_type=media,

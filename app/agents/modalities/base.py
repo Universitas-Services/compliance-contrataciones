@@ -78,9 +78,11 @@ class BaseAnalistaAgent(BaseModalidadAgent):
     rol = RolAgente.ANALISTA
 
     def system_prompt_experto(self) -> str:
+        from app.agents.knowledge import etiqueta_tipo_contratacion
+
         return prompt_analista(
             self.modalidad,
-            self.tipo_contratacion.value,
+            etiqueta_tipo_contratacion(self.tipo_contratacion),
             self.descripcion,
         )
 
@@ -91,8 +93,10 @@ class BaseJuridicoAgent(BaseModalidadAgent):
     rol = RolAgente.JURIDICO
 
     def system_prompt_experto(self) -> str:
+        from app.agents.knowledge import etiqueta_tipo_contratacion
+
         return prompt_juridico(
             self.modalidad,
-            self.tipo_contratacion.value,
+            etiqueta_tipo_contratacion(self.tipo_contratacion),
             self.descripcion,
         )

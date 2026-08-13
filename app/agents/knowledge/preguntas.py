@@ -1,18 +1,17 @@
-"""Preguntas de seguimiento por modalidad × tipo de contratación × documento.
+"""Preguntas de rúbrica por modalidad × tipo de contratación × documento.
 
-Placeholders razonables de auditoría (PoC). Se especializarán con basamento legal.
+Placeholders de auditoría; se especializarán con basamento legal.
 """
 
 from __future__ import annotations
 
 from app.models.schemas import Modalidad, TipoContratacion, TipoDocumento
 
-# Preguntas transversales por tipo de documento (todas las modalidades).
 _BASE: dict[TipoDocumento, list[str]] = {
-    TipoDocumento.SOLICITUD_UNIDAD_USUARIA: [
-        "¿La solicitud identifica de forma clara la necesidad y el objeto a contratar?",
-        "¿Consta la unidad usuaria solicitante y la fecha de la solicitud?",
-        "¿El alcance descrito es coherente con la modalidad de selección elegida?",
+    TipoDocumento.ACTIVIDADES_PREVIAS: [
+        "¿Constan las actividades previas que fundamentan el inicio del procedimiento?",
+        "¿Se identifica la necesidad u objeto a contratar de forma clara?",
+        "¿Hay trazabilidad de la unidad / área responsable de la solicitud?",
     ],
     TipoDocumento.ACTA_INICIO: [
         "¿El acta de inicio identifica la nomenclatura del procedimiento?",
@@ -25,199 +24,235 @@ _BASE: dict[TipoDocumento, list[str]] = {
         "¿Incluye cronograma, garantías y condiciones de entrega o ejecución?",
         "¿Hay cláusulas discriminatorias o ambiguas que puedan afectar la competencia?",
     ],
-    TipoDocumento.ACTOS_MOTIVADOS: [
-        "¿El acto motivado expresa de forma suficiente los fundamentos de hecho y de derecho?",
-        "¿La decisión adoptada es coherente con los antecedentes del expediente?",
-        "¿Identifica el órgano emisor, fecha y nomenclatura del procedimiento?",
+    TipoDocumento.CONDICIONES_CONTRATACION: [
+        "¿Las condiciones de contratación definen el objeto, plazos y obligaciones esenciales?",
+        "¿Son coherentes con el acto motivado que autoriza el procedimiento?",
+        "¿Identifican la nomenclatura del expediente?",
     ],
-    TipoDocumento.LLAMADO_INVITACION: [
-        "¿El llamado/invitación publica el objeto, plazos y lugar de entrega de ofertas?",
+    TipoDocumento.LLAMADO: [
+        "¿El llamado publica el objeto, plazos y lugar de entrega de ofertas?",
         "¿Coincide la nomenclatura con la del resto del expediente?",
         "¿Se indica la modalidad de selección de forma expresa?",
     ],
-    TipoDocumento.MODIFICACIONES_PLIEGO: [
-        "¿La modificación está motivada y notificada a los interesados en tiempo hábil?",
-        "¿Afecta requisitos esenciales o plazos de forma que deba reabrirse el proceso?",
-        "¿Queda trazabilidad de la versión vigente del pliego?",
+    TipoDocumento.INVITACIONES: [
+        "¿La invitación identifica a los destinatarios y el objeto del procedimiento?",
+        "¿Constan plazos y condiciones de presentación?",
+        "¿Coincide la nomenclatura con el expediente?",
     ],
-    TipoDocumento.ACTA_RECEPCION_OFERTAS: [
-        "¿El acta registra fecha, hora, lugar y oferentes presentes/recibidos?",
+    TipoDocumento.PUNTO_DE_CUENTA: [
+        "¿El punto de cuenta autoriza expresamente el inicio del procedimiento?",
+        "¿Identifica objeto, modalidad y fundamento de la autorización?",
+        "¿Consta la aprobación del órgano competente?",
+    ],
+    TipoDocumento.ACTO_MOTIVADO_INICIO: [
+        "¿El acto motivado autoriza el inicio del procedimiento de forma expresa?",
+        "¿Expone fundamentos de hecho y de derecho suficientes?",
+        "¿Identifica nomenclatura, objeto y órgano emisor?",
+    ],
+    TipoDocumento.ACTA_RECEPCION_SOBRES: [
+        "¿El acta registra fecha, hora, lugar y oferentes/sobres recibidos?",
         "¿Consta la integridad de los sobres o medios de presentación?",
         "¿Hay observaciones de los oferentes y cómo se trataron?",
     ],
-    TipoDocumento.OFERTAS_RECIBIDAS: [
+    TipoDocumento.ACTA_APERTURA_SOBRES: [
+        "¿El acta documenta la apertura en el momento correspondiente a la modalidad?",
+        "¿Identifica las ofertas/sobres abiertos y asistentes?",
+        "¿Registra observaciones relevantes de la apertura?",
+    ],
+    TipoDocumento.ACTA_RECEPCION_MV_CALIF_OFERTAS: [
+        "¿Registra la recepción de manifestaciones de voluntad, calificación y/o ofertas?",
+        "¿Constan fecha, hora, lugar e interesados presentados?",
+        "¿Hay control de integridad de la documentación recibida?",
+    ],
+    TipoDocumento.ACTA_APERTURA_MV_CALIFICACION: [
+        "¿Documenta la apertura de manifestaciones de voluntad y documentos de calificación?",
+        "¿Identifica participantes y resultado formal del acto?",
+        "¿Es coherente con la modalidad (diferida / cerrado / separado)?",
+    ],
+    TipoDocumento.INFORME_CALIFICACION: [
+        "¿El informe evalúa los requisitos de calificación de forma motivada?",
+        "¿Concluye con recomendación clara de habilitación o no?",
+        "¿Se apoya en el pliego y en la documentación presentada?",
+    ],
+    TipoDocumento.NOTIFICACION_CALIFICACION: [
+        "¿Notifica el resultado de la calificación a los interesados?",
+        "¿Identifica el procedimiento y el sentido de la decisión?",
+        "¿Consta medio y fecha de notificación?",
+    ],
+    TipoDocumento.ACTA_APERTURA_OFERTAS_DEVOLUCION: [
+        "¿Documenta la apertura de ofertas y, si aplica, la devolución de sobres?",
+        "¿Identifica oferentes y documentos abiertos?",
+        "¿Registra observaciones del acto?",
+    ],
+    TipoDocumento.ACTA_RECEPCION_MV_CALIFICACION: [
+        "¿Registra la recepción de manifestaciones de voluntad y documentos de calificación?",
+        "¿Constan fecha, hora, lugar e interesados?",
+        "¿Hay control de integridad de la documentación?",
+    ],
+    TipoDocumento.ACTA_RECEPCION_OFERTAS: [
+        "¿El acta registra fecha, hora, lugar y ofertas recibidas?",
+        "¿Consta la integridad de los sobres o medios de presentación?",
+        "¿Hay observaciones de los oferentes?",
+    ],
+    TipoDocumento.ACTA_APERTURA_OFERTAS: [
+        "¿Documenta la apertura de ofertas en el momento correspondiente?",
+        "¿Identifica oferentes y contenido abierto?",
+        "¿Registra observaciones del acto?",
+    ],
+    TipoDocumento.ACTA_RECEPCION_CALIF_OFERTAS: [
+        "¿Registra la recepción de documentos de calificación y/o ofertas?",
+        "¿Constan fecha, hora, lugar e interesados?",
+        "¿Hay control de integridad de la documentación?",
+    ],
+    TipoDocumento.ACTA_APERTURA_CALIF_OFERTAS: [
+        "¿Documenta la apertura de calificación y/o ofertas?",
+        "¿Identifica participantes y resultado del acto?",
+        "¿Es coherente con la consulta de precio?",
+    ],
+    TipoDocumento.OFERTAS: [
         "¿La oferta responde a los requisitos del pliego o invitación?",
         "¿Se identifica al oferente y la nomenclatura del procedimiento?",
-        "¿Hay inconsistencias técnicas o económicas evidentes frente a lo solicitado?",
+        "¿La oferta económica/técnica es legible y completa en lo esencial?",
     ],
-    TipoDocumento.INFORME_ANALISIS_RECOMENDACION: [
-        "¿El informe aplica los criterios de evaluación previstos?",
-        "¿La recomendación está sustentada en el análisis y es trazable?",
-        "¿Se documentan descalificaciones o exclusiones con fundamento?",
+    TipoDocumento.GARANTIA_SOSTENIMIENTO_OFERTA: [
+        "¿Consta la garantía de sostenimiento de la oferta cuando el pliego la exige?",
+        "¿Identifica monto, vigencia y oferente?",
+        "¿Es coherente con los requisitos del pliego?",
     ],
-    TipoDocumento.DOCUMENTO_ADJUDICACION: [
-        "¿La adjudicación identifica al adjudicatario, el objeto y el monto?",
-        "¿Es coherente con el informe de recomendación?",
-        "¿Consta la autoridad competente y la fecha del acto?",
+    TipoDocumento.INFORME_EVALUACION_RECOMENDACION: [
+        "¿El informe motiva la evaluación conforme a los criterios del pliego?",
+        "¿Formula una recomendación de adjudicación clara?",
+        "¿Trata de forma homogénea a los oferentes evaluados?",
     ],
-    TipoDocumento.NOTIFICACION_ADJUDICACION: [
-        "¿Se notificó a adjudicatario y demás oferentes según corresponda?",
-        "¿La notificación indica plazos para eventuales reclamos o formalización?",
-        "¿Coincide con los datos del acto de adjudicación?",
+    TipoDocumento.INFORME_RECOMENDACION: [
+        "¿El informe formula una recomendación motivada de adjudicación?",
+        "¿Se apoya en la evaluación de las ofertas recibidas?",
+        "¿Identifica el procedimiento y el oferente recomendado?",
+    ],
+    TipoDocumento.INFORME_VERIFICACION_RAZONABILIDAD: [
+        "¿Verifica la razonabilidad de precios de forma documentada?",
+        "¿Incluye recomendación asociada a la verificación?",
+        "¿Es coherente con las ofertas e invitaciones del expediente?",
+    ],
+    TipoDocumento.INFORME_VERIFICACION_ADJUDICACION: [
+        "¿El informe verifica y recomienda la adjudicación de forma motivada?",
+        "¿Se apoya en la documentación del expediente?",
+        "¿Identifica el procedimiento y la conclusión?",
+    ],
+    TipoDocumento.INFORME_OPINION_COMISION: [
+        "¿Consta la opinión de la Comisión de Contrataciones?",
+        "¿La opinión es congruente con el informe de evaluación/recomendación?",
+        "¿Identifica el procedimiento y el sentido de la opinión?",
+    ],
+    TipoDocumento.ADJUDICACION_O_EQUIVALENTE: [
+        "¿El acto de adjudicación (o equivalente) identifica al adjudicatario y el objeto?",
+        "¿Es coherente con la recomendación previa?",
+        "¿Consta fundamento y nomenclatura del procedimiento?",
+    ],
+    TipoDocumento.ADJUDICACION_ACTO_MOTIVADO: [
+        "¿La adjudicación se formaliza mediante acto motivado?",
+        "¿Expone fundamentos suficientes de hecho y de derecho?",
+        "¿Identifica adjudicatario, objeto y nomenclatura?",
+    ],
+    TipoDocumento.NOTIFICACION_ADJUDICADOS: [
+        "¿Se notifica la adjudicación al/los adjudicatario(s)?",
+        "¿Identifica el procedimiento y el sentido de la decisión?",
+        "¿Consta medio y fecha de notificación?",
+    ],
+    TipoDocumento.NOTIFICACION_NO_ADJUDICADOS: [
+        "¿Se notifica el resultado a los no adjudicados?",
+        "¿Identifica el procedimiento y el sentido de la decisión?",
+        "¿Consta medio y fecha de notificación?",
+    ],
+    TipoDocumento.NOTIFICACION_INTERESADOS: [
+        "¿Se notifica a los interesados el resultado relevante del procedimiento?",
+        "¿Identifica nomenclatura y sentido de la comunicación?",
+        "¿Consta medio y fecha de notificación?",
     ],
     TipoDocumento.CONTRATO: [
-        "¿El contrato identifica correctamente las partes, objeto, monto y plazo?",
-        "¿Las obligaciones y condiciones son coherentes con la adjudicación y el pliego?",
-        "¿Constan firmas / formalización válida de ambas partes?",
-        "¿Hay cláusulas de garantías, penalidades y resolución acordes al expediente?",
+        "¿El contrato/orden identifica partes, objeto, monto y plazos?",
+        "¿Es coherente con la adjudicación y el pliego/condiciones?",
+        "¿Constan firmas o formalidades esenciales de perfeccionamiento?",
     ],
-    TipoDocumento.JUSTIFICACION_CONTRATACION_DIRECTA: [
-        "¿La justificación encuadra el supuesto legal de contratación directa?",
-        "¿Se acreditan los hechos que hacen procedente la excepción?",
-        "¿Se evaluó la razonabilidad del proveedor y del precio?",
-    ],
-    TipoDocumento.INVITACION_CERRADA: [
-        "¿La invitación se dirige a oferentes preseleccionados con fundamento?",
-        "¿Se informa objeto, plazos y condiciones de participación?",
-        "¿Hay evidencia de envío/recibo a todos los invitados?",
-    ],
-    TipoDocumento.SOLICITUD_COTIZACIONES: [
-        "¿Se solicitó cotización a un número suficiente de proveedores?",
-        "¿La solicitud describe el bien/servicio de forma comparable?",
-        "¿Quedan constancias de envío y respuesta?",
-    ],
-    TipoDocumento.COMPARATIVO_PRECIOS: [
-        "¿El comparativo enfrenta ofertas homogéneas (mismas especificaciones)?",
-        "¿La selección del menor precio u oferta más conveniente está motivada?",
-        "¿Se identifican exclusiones o cotizaciones incompletas?",
-    ],
-    TipoDocumento.ACTA_APERTURA_TECNICA: [
-        "¿El acta de apertura técnica registra oferentes y cumplimiento formal?",
-        "¿Se separa claramente la evaluación técnica de la económica?",
-        "¿Hay firmas de la comisión y observaciones relevantes?",
-    ],
-    TipoDocumento.ACTA_APERTURA_ECONOMICA: [
-        "¿Solo se abren ofertas económicas de quienes pasaron la fase técnica?",
-        "¿Se registran montos ofertados de forma transparente?",
-        "¿Coincide con el cronograma de apertura diferida?",
-    ],
-    TipoDocumento.DOCUMENTO_EXCLUSION: [
-        "¿El documento identifica el supuesto de exclusión de la modalidad ordinaria?",
-        "¿Fundamenta de hecho y de derecho por qué no aplica el régimen ordinario?",
-        "¿Es coherente con el objeto y la urgencia/necesidad planteada?",
+    TipoDocumento.RESPONSABILIDAD_SOCIAL: [
+        "¿Consta la documentación de responsabilidad social exigida?",
+        "¿Identifica el procedimiento y el alcance de la obligación?",
+        "¿Es coherente con lo previsto en el pliego o normativa aplicable?",
     ],
     TipoDocumento.OTROS: [
-        "¿Qué aporte concreto tiene este documento en el expediente?",
-        "¿Está referenciado o es coherente con la nomenclatura del procedimiento?",
-        "¿Genera alguna observación de compliance que deba escalarse?",
+        "¿El documento es pertinente al expediente y a la modalidad?",
+        "¿Identifica la nomenclatura del procedimiento?",
+        "¿Aporta hechos relevantes para la auditoría de compliance?",
     ],
 }
 
-# Matiz por tipo de contratación (se añaden a las base).
 _EXTRA_TIPO: dict[TipoContratacion, dict[TipoDocumento, list[str]]] = {
     TipoContratacion.BIENES: {
-        TipoDocumento.SOLICITUD_UNIDAD_USUARIA: [
-            "¿Se especifican cantidades, unidad de medida y especificaciones técnicas mínimas del bien?",
-        ],
         TipoDocumento.PLIEGO_CONDICIONES: [
-            "¿El pliego detalla especificaciones técnicas, marca/referencia equivalentes y condiciones de entrega?",
+            "¿Las especificaciones técnicas de los bienes son verificables y no direccionadas?",
         ],
         TipoDocumento.CONTRATO: [
-            "¿El contrato fija cantidad, especificaciones, lugar y plazo de entrega de los bienes?",
-        ],
-        TipoDocumento.COMPARATIVO_PRECIOS: [
-            "¿Las cotizaciones comparan el mismo bien (o equivalente técnico) y condiciones de entrega?",
+            "¿El contrato/orden precisa cantidades, unidad de medida y condiciones de entrega?",
         ],
     },
     TipoContratacion.OBRAS: {
-        TipoDocumento.SOLICITUD_UNIDAD_USUARIA: [
-            "¿La solicitud describe el alcance de la obra, ubicación y necesidad de intervención?",
-        ],
         TipoDocumento.PLIEGO_CONDICIONES: [
-            "¿Existen planos, memoria descriptiva o especificaciones de obra referenciadas en el pliego?",
+            "¿El alcance de obra y el cronograma son suficientemente definidos?",
         ],
         TipoDocumento.ACTA_INICIO: [
-            "¿El acta contempla cronograma de obra y/o hitos de ejecución relevantes?",
+            "¿El monto estimado es coherente con el alcance de obra descrito?",
         ],
         TipoDocumento.CONTRATO: [
-            "¿El contrato fija plazo de ejecución, anticipos, retenciones y régimen de variaciones de obra?",
-        ],
-        TipoDocumento.INFORME_ANALISIS_RECOMENDACION: [
-            "¿El análisis considera capacidad técnica/experiencia en obras similares de los oferentes?",
+            "¿El contrato de obra fija plazo de ejecución y forma de pago?",
         ],
     },
     TipoContratacion.SERVICIOS: {
-        TipoDocumento.SOLICITUD_UNIDAD_USUARIA: [
-            "¿Se describen el alcance del servicio, frecuencia y resultados esperados?",
-        ],
         TipoDocumento.PLIEGO_CONDICIONES: [
-            "¿El pliego define niveles de servicio (SLA), personal mínimo o entregables medibles?",
+            "¿El servicio contratado tiene entregables o niveles de servicio medibles?",
         ],
         TipoDocumento.CONTRATO: [
-            "¿El contrato establece forma de pago, indicadores de cumplimiento y penalidades por incumplimiento?",
-        ],
-        TipoDocumento.JUSTIFICACION_CONTRATACION_DIRECTA: [
-            "¿Se justifica por qué el servicio no puede obtenerse mediante modalidad competitiva?",
+            "¿El contrato de servicio define alcance, plazo y contraprestación?",
         ],
     },
 }
 
-# Matiz por modalidad (se añaden a las base + tipo).
 _EXTRA_MODALIDAD: dict[Modalidad, dict[TipoDocumento, list[str]]] = {
     Modalidad.CA_ACTO_UNICO_APERTURA_UNICA: {
-        TipoDocumento.ACTA_RECEPCION_OFERTAS: [
-            "¿La apertura única registra en el mismo acto los aspectos formales y económicos requeridos?",
-        ],
-        TipoDocumento.PLIEGO_CONDICIONES: [
-            "¿El pliego es consistente con un concurso abierto de acto único / apertura única?",
+        TipoDocumento.ACTA_APERTURA_SOBRES: [
+            "¿La apertura es coherente con un acto único de apertura (técnica y económica cuando aplique)?",
         ],
     },
     Modalidad.CA_ACTO_UNICO_APERTURA_DIFERIDA: {
-        TipoDocumento.ACTA_APERTURA_TECNICA: [
-            "¿Queda claro que la oferta económica permanece cerrada hasta la apertura diferida?",
-        ],
-        TipoDocumento.ACTA_APERTURA_ECONOMICA: [
-            "¿Solo participan en la apertura económica quienes cumplieron la evaluación técnica?",
+        TipoDocumento.ACTA_APERTURA_MV_CALIFICACION: [
+            "¿La apertura de calificación está separada de la apertura de ofertas conforme a la modalidad diferida?",
         ],
     },
     Modalidad.CA_ACTO_SEPARADO: {
-        TipoDocumento.ACTA_APERTURA_TECNICA: [
-            "¿El expediente refleja la separación de actos prevista para esta modalidad?",
+        TipoDocumento.ACTA_RECEPCION_OFERTAS: [
+            "¿La recepción de ofertas es posterior y separable de la fase de calificación?",
         ],
     },
     Modalidad.CONCURSO_CERRADO: {
-        TipoDocumento.ACTA_INICIO: [
-            "¿Se documenta el criterio de preselección de los invitados al concurso cerrado?",
-        ],
-        TipoDocumento.INVITACION_CERRADA: [
-            "¿Todos los preseleccionados recibieron la misma información y plazos?",
+        TipoDocumento.INVITACIONES: [
+            "¿Las invitaciones se dirigen solo a oferentes preseleccionados?",
         ],
     },
     Modalidad.CONSULTA_PRECIO: {
-        TipoDocumento.SOLICITUD_COTIZACIONES: [
-            "¿El proceso de consulta de precios garantiza comparabilidad y trazabilidad de las cotizaciones?",
-        ],
-        TipoDocumento.COMPARATIVO_PRECIOS: [
-            "¿La decisión se basa en el comparativo y no en criterios no documentados?",
+        TipoDocumento.PUNTO_DE_CUENTA: [
+            "¿El punto de cuenta es previo al inicio formal del procedimiento de consulta de precio?",
         ],
     },
     Modalidad.CONTRATACION_DIRECTA: {
-        TipoDocumento.JUSTIFICACION_CONTRATACION_DIRECTA: [
-            "¿La justificación evita generalidades y acredita el supuesto concreto de contratación directa?",
-        ],
-        TipoDocumento.ACTOS_MOTIVADOS: [
-            "¿El acto motivado remite expresamente a la justificación de la contratación directa?",
+        TipoDocumento.ACTO_MOTIVADO_INICIO: [
+            "¿La autorización motiva el supuesto concreto de contratación directa?",
         ],
     },
     Modalidad.MODALIDADES_EXCLUIDAS: {
-        TipoDocumento.DOCUMENTO_EXCLUSION: [
-            "¿El documento de exclusión es previo o concurrente a la decisión de no usar modalidad ordinaria?",
+        TipoDocumento.ACTO_MOTIVADO_INICIO: [
+            "¿El acto motiva de forma suficiente la aplicación del régimen de exclusión?",
         ],
-        TipoDocumento.ACTOS_MOTIVADOS: [
-            "¿El acto motivado enlaza de forma expresa con el fundamento de la exclusión?",
-        ],
-        TipoDocumento.CONTRATO: [
-            "¿El instrumento contractual es coherente con el régimen de exclusión aplicado?",
+        TipoDocumento.ADJUDICACION_ACTO_MOTIVADO: [
+            "¿La adjudicación por acto motivado es coherente con el régimen de exclusión?",
         ],
     },
 }
@@ -239,11 +274,16 @@ def preguntas_para(
                 seen.add(qn)
                 out.append(qn)
 
-    _add(_BASE.get(tipo_documento, [
-        f"¿El documento {tipo_documento.value} es coherente con el expediente?",
-        f"¿Identifica la nomenclatura del procedimiento en {tipo_documento.value}?",
-        f"¿Hay observaciones de compliance relevantes en {tipo_documento.value}?",
-    ]))
+    _add(
+        _BASE.get(
+            tipo_documento,
+            [
+                f"¿El documento {tipo_documento.value} es coherente con el expediente?",
+                f"¿Identifica la nomenclatura del procedimiento?",
+                "¿Hay observaciones de compliance relevantes?",
+            ],
+        )
+    )
     _add(_EXTRA_TIPO.get(tipo_contratacion, {}).get(tipo_documento, []))
     _add(_EXTRA_MODALIDAD.get(modalidad, {}).get(tipo_documento, []))
     return out

@@ -6,14 +6,13 @@ import re
 
 from app.models.schemas import DocumentoAnalizado, PreguntaSeguimiento, SesionCompliance
 
-_QA_SECTION = "## Respuestas de seguimiento / cuestionario"
-_QA_SECTION_ALT = "## Respuestas de seguimiento"
+_QA_SECTION = "## Rúbrica del documento (Analista)"
+_QA_SECTION_ALT = "## Respuestas de seguimiento / cuestionario"
+_QA_SECTION_ALT2 = "## Respuestas de seguimiento"
 
 
 def pregunta_pendiente(doc: DocumentoAnalizado) -> PreguntaSeguimiento | None:
-    for p in doc.preguntas_seguimiento:
-        if not p.respondida:
-            return p
+    """Ya no hay Q&A de usuario: la rúbrica la responde el Analista al subir."""
     return None
 
 
@@ -26,23 +25,105 @@ def progreso_cuestionario(doc: DocumentoAnalizado) -> tuple[int, int]:
 def documento_cuestionario_activo(
     sesion: SesionCompliance,
 ) -> DocumentoAnalizado | None:
-    if sesion.documento_en_cuestionario:
-        for d in sesion.documentos_analizados:
-            if d.id == sesion.documento_en_cuestionario:
-                if pregunta_pendiente(d) is not None:
-                    return d
-                break
-    # Fallback: último doc con preguntas pendientes
-    for d in reversed(sesion.documentos_analizados):
-        if pregunta_pendiente(d) is not None:
-            return d
+    """Desactivado: el chat no atrapa respuestas de cuestionario de usuario."""
     return None
 
 
+def _norm_estado(raw: str) -> str:
+    t = raw.strip().lower().replace(" ", "_")
+    if t in {"n/a", "n.a.", "na", "no_aplica", "noaplica"}:
+        return "na"
+    if t in {"si", "sí", "yes"}:
+        return "si"
+    if t in {"no"}:
+        return "no"
+    if t in {"parcial"}:
+        return "parcial"
+    if t in {"no_consta", "noconsta"}:
+        return "no_consta"
+    return "no_consta"
+
+
+def aplicar_rubrica_agente(
+    preguntas: list[PreguntaSeguimiento],
+    rubrica_raw: object,
+) -> None:
+    """Rellena cada ítem de la rúbrica con la respuesta del Analista."""
+    by_id: dict[str, dict] = {}
+    items: list = []
+    if isinstance(rubrica_raw, list):
+        items = rubrica_raw
+    elif isinstance(rubrica_raw, dict):
+        items = rubrica_raw.get("items") or rubrica_raw.get("preguntas") or []
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        for key in ("id", "codigo_pregunta"):
+            pid = str(item.get(key) or "").strip().lower()
+            if pid:
+                by_id[pid] = item
+
+    for i, p in enumerate(preguntas, start=1):
+        item = by_id.get(p.id.lower()) or by_id.get(f"q{i}")
+        if item is None and p.codigo_pregunta:
+            item = by_id.get(p.codigo_pregunta.lower())
+        if item is None and i - 1 < len(items):
+            cand = items[i - 1]
+            item = cand if isinstance(cand, dict) else None
+        if not item:
+            p.respondida = True
+            p.respondida_por = "agente"
+            p.estado = "no_consta"
+            p.respuesta = "Sin valoración explícita del modelo sobre este ítem."
+            continue
+        estado = _norm_estado(str(item.get("estado") or ""))
+        resp = str(item.get("respuesta") or item.get("explicacion") or "").strip()
+        ref = item.get("ref")
+        p.estado = estado  # type: ignore[assignment]
+        p.respuesta = resp or f"Estado: {estado}"
+        p.ref = str(ref).strip() if ref not in (None, "") else None
+        for campo in (
+            "codigo_pregunta",
+            "fundamento_legal",
+            "rango_criticidad",
+            "accion_legal",
+            "advertencia_gerencia",
+        ):
+            val = item.get(campo)
+            if val not in (None, ""):
+                setattr(p, campo, str(val).strip())
+            elif campo == "codigo_pregunta" and p.codigo_pregunta:
+                continue  # conservar código del MD oficial
+        p.respondida = True
+        p.respondida_por = "agente"
+
+
+def resumen_rubrica_chat(doc: DocumentoAnalizado) -> str:
+    """Texto breve de la rúbrica para el mensaje post-upload."""
+    if not doc.preguntas_seguimiento:
+        return ""
+    hechas, total = progreso_cuestionario(doc)
+    estatus = doc.estatus_global or ("Verde" if doc.cumple else "Amarillo")
+    lineas = [
+        f"Estatus global: {estatus}",
+        f"Rúbrica ({hechas}/{total} ítems):",
+        "",
+    ]
+    for i, p in enumerate(doc.preguntas_seguimiento, start=1):
+        est = (p.estado or "?").upper()
+        ref = f" [{p.ref}]" if p.ref else ""
+        cod = f"{p.codigo_pregunta} · " if p.codigo_pregunta else ""
+        lineas.append(f"{i}. [{est}] {cod}{p.texto}")
+        if p.respuesta:
+            lineas.append(f"   → {p.respuesta}{ref}")
+        lineas.append("")
+    return "\n".join(lineas).rstrip()
+
+
 def sincronizar_informe_documento(doc: DocumentoAnalizado) -> None:
-    """Reescribe la sección de Q&A del informe del documento desde el estado actual."""
+    """Reescribe la sección de rúbrica del informe desde el estado actual."""
     base = doc.informe_markdown or ""
-    for marker in (_QA_SECTION, _QA_SECTION_ALT):
+    for marker in (_QA_SECTION, _QA_SECTION_ALT, _QA_SECTION_ALT2):
         if marker in base:
             base = base.split(marker)[0].rstrip()
             break
@@ -57,19 +138,21 @@ def sincronizar_informe_documento(doc: DocumentoAnalizado) -> None:
         "",
         _QA_SECTION,
         "",
-        f"Progreso: {hechas}/{total} respondidas.",
+        f"Progreso: {hechas}/{total} valorados por el Analista.",
         "",
     ]
     for i, p in enumerate(doc.preguntas_seguimiento, start=1):
-        estado = "respondida" if p.respondida else "pendiente"
-        lineas.append(f"### Pregunta {i} ({estado})")
+        est = p.estado or ("ok" if p.respondida else "pendiente")
+        lineas.append(f"### Ítem {i} ({est})")
         lineas.append("")
         lineas.append(p.texto)
         lineas.append("")
         if p.respondida and p.respuesta:
-            lineas.append(f"**Respuesta del usuario:** {p.respuesta}")
+            lineas.append(f"**Respuesta del Analista:** {p.respuesta}")
+            if p.ref:
+                lineas.append(f"**Evidencia / ref:** {p.ref}")
         else:
-            lineas.append("**Respuesta del usuario:** _(pendiente)_")
+            lineas.append("**Respuesta del Analista:** _(pendiente)_")
         lineas.append("")
 
     doc.informe_markdown = (base + "\n" + "\n".join(lineas)).strip() + "\n"
@@ -81,34 +164,27 @@ def registrar_respuesta(
     *,
     pregunta_id: str | None = None,
 ) -> PreguntaSeguimiento | None:
-    """Registra respuesta a una pregunta (por id o a la siguiente pendiente)."""
+    """Compat: permite sobreescribir un ítem (p. ej. corrección manual)."""
     target: PreguntaSeguimiento | None = None
     if pregunta_id:
         target = next((p for p in doc.preguntas_seguimiento if p.id == pregunta_id), None)
     if target is None:
-        target = pregunta_pendiente(doc)
+        for p in doc.preguntas_seguimiento:
+            if not p.respondida:
+                target = p
+                break
     if target is None:
         return None
     target.respuesta = texto_respuesta.strip()
     target.respondida = True
+    target.respondida_por = "usuario"
     sincronizar_informe_documento(doc)
     return target
 
 
 def mensaje_pregunta_actual(doc: DocumentoAnalizado) -> str:
-    pend = pregunta_pendiente(doc)
-    if pend is None:
-        return (
-            f"Cuestionario del documento «{doc.tipo.value}» completado. "
-            "Las respuestas quedan en el informe del documento y se incluirán "
-            "en el informe global del expediente."
-        )
-    hechas, total = progreso_cuestionario(doc)
-    n = hechas + 1
-    return (
-        f"Cuestionario — {doc.tipo.value} ({doc.nombre_archivo})\n"
-        f"Pregunta {n} de {total}:\n\n"
-        f"{pend.texto}"
+    return resumen_rubrica_chat(doc) or (
+        f"Rúbrica del documento «{doc.tipo.value}» sin ítems precargados."
     )
 
 
@@ -177,7 +253,7 @@ def construir_informe_global_estructurado(sesion: SesionCompliance) -> str:
     else:
         lineas.append("- Sin advertencias registradas.")
 
-    lineas.extend(["", "## 5. Cuestionario de seguimiento (respuestas del usuario)", ""])
+    lineas.extend(["", "## 5. Rúbrica por documento (Analista)", ""])
     hubo_qa = False
     for d in sesion.documentos_analizados:
         if not d.preguntas_seguimiento:
@@ -187,14 +263,17 @@ def construir_informe_global_estructurado(sesion: SesionCompliance) -> str:
         lineas.append(f"### {d.tipo.value} — {d.nombre_archivo} ({hechas}/{total})")
         lineas.append("")
         for p in d.preguntas_seguimiento:
-            lineas.append(f"- **{p.texto}**")
+            est = f" [{p.estado}]" if p.estado else ""
+            lineas.append(f"- **{p.texto}**{est}")
             if p.respondida and p.respuesta:
-                lineas.append(f"  - Respuesta: {p.respuesta}")
+                lineas.append(f"  - Analista: {p.respuesta}")
+                if p.ref:
+                    lineas.append(f"  - Ref: {p.ref}")
             else:
-                lineas.append("  - Respuesta: _(pendiente)_")
+                lineas.append("  - Analista: _(pendiente)_")
         lineas.append("")
     if not hubo_qa:
-        lineas.append("- Aún no hay cuestionarios asociados.")
+        lineas.append("- Aún no hay rúbricas asociadas.")
 
     lineas.extend(["", "## 5b. Dictámenes jurídicos", ""])
     if sesion.dictamenes_juridicos:

@@ -2,18 +2,15 @@
 
 from __future__ import annotations
 
+import re
 import uuid
 from datetime import datetime
 
-from app.agents.cuestionario import (
-    documento_cuestionario_activo,
-    mensaje_pregunta_actual,
-    pregunta_pendiente,
-    progreso_cuestionario,
-    registrar_respuesta,
-    sincronizar_informe_documento,
+from app.agents.knowledge import (
+    etiqueta_documento,
+    etiqueta_modalidad,
+    etiqueta_tipo_contratacion,
 )
-from app.agents.knowledge import etiqueta_modalidad
 from app.agents.modalities import get_agente, get_modalidad_agent
 from app.core import session_store
 from app.core.llm_client import (
@@ -36,8 +33,19 @@ from app.models.schemas import (
 )
 
 
+def _texto_chat_plano(texto: str) -> str:
+    """Quita énfasis markdown típico que el modelo mete en respuestas de chat."""
+    t = texto or ""
+    t = re.sub(r"\*\*(.+?)\*\*", r"\1", t)
+    t = re.sub(r"__(.+?)__", r"\1", t)
+    t = re.sub(r"(?<!\w)\*(?!\s)(.+?)(?<!\s)\*(?!\w)", r"\1", t)
+    t = t.replace("**", "")
+    return t.strip()
+
+
 def _config_completa(sesion: SesionCompliance) -> bool:
     return bool(sesion.nomenclatura and sesion.modalidad and sesion.tipo_contratacion)
+
 
 
 def _slots_pendientes_vals(sesion: SesionCompliance) -> list[TipoDocumento]:
@@ -53,18 +61,21 @@ def _activar_sesion(sesion: SesionCompliance) -> str:
     sesion.checklist_slots = agent.obtener_checklist()
     sesion.estado = EstadoSesion.ACTIVA
     slots_txt = "\n".join(
-        f"- {s.tipo_documento.value}: {s.descripcion}" for s in sesion.checklist_slots
+        f"{i}. {s.descripcion or etiqueta_documento(s.tipo_documento)}"
+        for i, s in enumerate(sesion.checklist_slots, start=1)
     )
+    modalidad_txt = etiqueta_modalidad(sesion.modalidad)
+    tipo_txt = etiqueta_tipo_contratacion(sesion.tipo_contratacion)
     return (
-        f"Sesión activada para «{sesion.nomenclatura}».\n"
-        f"Modalidad: {etiqueta_modalidad(sesion.modalidad)}\n"
-        f"Tipo de contratación: {sesion.tipo_contratacion.value}\n\n"
-        f"{agent.descripcion}\n\n"
-        "Operan dos agentes: **Analista** (forma, por documento) y **Jurídico** "
-        "(fondo; puedes pedirlo en cualquier momento con documentos parciales).\n\n"
-        "Checklist sugerido (cualquier orden; no obligatorio completar todos):\n"
+        f"Hemos registrado el Expediente N° {sesion.nomenclatura} de la modalidad "
+        f"{modalidad_txt} para un contrato de {tipo_txt}.\n\n"
+        "A continuación, verás el listado de documentos requeridos para esta "
+        "modalidad. Por favor, selecciona el documento con el que deseas "
+        "comenzar la revisión.\n\n"
         f"{slots_txt}\n\n"
-        "Sube documentos o escribe «revisión jurídica» / usa el botón correspondiente."
+        "Puedes adjuntar el archivo indicando el tipo correspondiente. "
+        "Si en cualquier momento deseas una revisión jurídica del expediente "
+        "(parcial o final), escribe «revisión jurídica» o usa el botón de Archivos."
     )
 
 
@@ -109,21 +120,128 @@ def _aplicar_extraccion_llm(sesion: SesionCompliance, data: dict) -> list[str]:
     return cambios
 
 
-def _parece_salir_del_cuestionario(mensaje: str) -> bool:
-    t = mensaje.strip().lower()
-    triggers = (
-        "saltar pregunta",
-        "saltar cuestionario",
-        "omitir pregunta",
-        "omitir cuestionario",
-        "cancelar cuestionario",
-        "pausar cuestionario",
-        "más tarde",
-        "luego el cuestionario",
-        "subir otro",
-        "otro documento",
-    )
-    return any(t.startswith(x) or t == x for x in triggers)
+def _match_modalidad(texto: str) -> Modalidad | None:
+    t = texto.strip()
+    if not t:
+        return None
+    key = t.upper().replace(" ", "_").replace("-", "_")
+    for m in Modalidad:
+        if t == m.value or key == m.value or key == m.name:
+            return m
+    # etiquetas legibles (por si el front envía label)
+    for m in Modalidad:
+        if etiqueta_modalidad(m).strip().lower() == t.lower():
+            return m
+    return None
+
+
+def _match_tipo_contratacion(texto: str) -> TipoContratacion | None:
+    t = texto.strip()
+    if not t:
+        return None
+    key = t.upper().replace(" ", "_")
+    for tipo in TipoContratacion:
+        if key == tipo.value or key == tipo.name:
+            return tipo
+    labels = {
+        "bienes": TipoContratacion.BIENES,
+        "obra": TipoContratacion.OBRAS,
+        "obras": TipoContratacion.OBRAS,
+        "servicio": TipoContratacion.SERVICIOS,
+        "servicios": TipoContratacion.SERVICIOS,
+    }
+    return labels.get(t.lower())
+
+
+def _norm_txt(s: str) -> str:
+    t = (s or "").lower()
+    for a, b in (
+        ("á", "a"),
+        ("é", "e"),
+        ("í", "i"),
+        ("ó", "o"),
+        ("ú", "u"),
+        ("ü", "u"),
+    ):
+        t = t.replace(a, b)
+    return t
+
+
+def _detectar_tipo_en_texto(mensaje: str) -> TipoContratacion | None:
+    """Detecta bienes/obras/servicios en texto libre (no solo mensaje exacto)."""
+    low = _norm_txt(mensaje)
+    # Más específico primero
+    if re.search(r"\bservicios?\b", low):
+        return TipoContratacion.SERVICIOS
+    if re.search(r"\bobras?\b", low):
+        return TipoContratacion.OBRAS
+    if re.search(r"\bbienes?\b", low):
+        return TipoContratacion.BIENES
+    return None
+
+
+def _detectar_modalidad_en_texto(mensaje: str) -> Modalidad | None:
+    """Detecta modalidad por frases naturales en el mensaje."""
+    # Primero intento match exacto (picker / código)
+    exact = _match_modalidad(mensaje.strip())
+    if exact is not None:
+        return exact
+
+    low = _norm_txt(mensaje)
+    # Orden: más específico → más genérico
+    reglas: list[tuple[tuple[str, ...], Modalidad]] = [
+        (
+            ("apertura unica", "acto unico apertura unica", "ca apertura unica"),
+            Modalidad.CA_ACTO_UNICO_APERTURA_UNICA,
+        ),
+        (
+            ("apertura diferida", "acto unico apertura diferida"),
+            Modalidad.CA_ACTO_UNICO_APERTURA_DIFERIDA,
+        ),
+        (("acto separado",), Modalidad.CA_ACTO_SEPARADO),
+        (("concurso cerrado",), Modalidad.CONCURSO_CERRADO),
+        (("consulta de precio", "consulta precio"), Modalidad.CONSULTA_PRECIO),
+        (("contratacion directa",), Modalidad.CONTRATACION_DIRECTA),
+        (("modalidades excluidas", "modalidad excluida"), Modalidad.MODALIDADES_EXCLUIDAS),
+    ]
+    for frases, mod in reglas:
+        if any(f in low for f in frases):
+            return mod
+    # "concurso abierto" solo, sin apertura → asume apertura única (la más usada)
+    if "concurso abierto" in low:
+        return Modalidad.CA_ACTO_UNICO_APERTURA_UNICA
+    return None
+
+
+def _completar_extraccion_desde_mensaje(
+    sesion: SesionCompliance,
+    mensaje: str,
+    data: dict,
+) -> dict:
+    """Rellena modalidad/tipo si el LLM los omitió pero el usuario ya los dijo."""
+    out = dict(data)
+    # Picker exacto (mensaje corto = código del OptionPicker)
+    corto = mensaje.strip()
+    if len(corto) <= 80 and "\n" not in corto:
+        if not sesion.modalidad and not out.get("modalidad"):
+            mod = _match_modalidad(corto)
+            if mod is not None:
+                out["modalidad"] = mod.value
+        if not sesion.tipo_contratacion and not out.get("tipo_contratacion"):
+            tipo = _match_tipo_contratacion(corto)
+            if tipo is not None:
+                out["tipo_contratacion"] = tipo.value
+
+    # Texto libre / mensaje largo
+    if not sesion.modalidad and not out.get("modalidad"):
+        mod = _detectar_modalidad_en_texto(mensaje)
+        if mod is not None:
+            out["modalidad"] = mod.value
+    if not sesion.tipo_contratacion and not out.get("tipo_contratacion"):
+        tipo = _detectar_tipo_en_texto(mensaje)
+        if tipo is not None:
+            out["tipo_contratacion"] = tipo.value
+    return out
 
 
 def _parece_pedido_juridico(mensaje: str) -> bool:
@@ -255,6 +373,11 @@ def ejecutar_dictamen_juridico(
     )
     sesion.dictamenes_juridicos.append(dictamen)
     etiqueta = "final" if alcance == AlcanceDictamen.FINAL else "parcial"
+    titulo = (
+        "Informe Ejecutivo Final de Cierre"
+        if alcance == AlcanceDictamen.FINAL
+        else "Informe Ejecutivo Parcial de Avance"
+    )
     sesion.historial.append(
         MensajeChat(
             rol=RolMensaje.USER,
@@ -265,7 +388,7 @@ def ejecutar_dictamen_juridico(
     sesion.historial.append(
         MensajeChat(
             rol=RolMensaje.ASSISTANT,
-            contenido=f"**Dictamen jurídico ({etiqueta})**\n\n{markdown}",
+            contenido=f"**{titulo}**\n\n{markdown}",
             timestamp=datetime.utcnow(),
         )
     )
@@ -276,47 +399,9 @@ def _procesar_respuesta_cuestionario(
     sesion: SesionCompliance,
     mensaje: str,
 ) -> str | None:
-    doc = documento_cuestionario_activo(sesion)
-    if doc is None:
-        sesion.documento_en_cuestionario = None
-        return None
-
-    if _parece_salir_del_cuestionario(mensaje):
-        sesion.documento_en_cuestionario = None
-        return (
-            "Dejamos el cuestionario en pausa. Puedes retomarlo escribiendo "
-            "«continuar cuestionario» o subiendo otro documento. "
-            "Las preguntas pendientes seguirán reflejadas en el informe."
-        )
-
-    if mensaje.strip().lower() in {"continuar cuestionario", "retomar cuestionario"}:
-        sesion.documento_en_cuestionario = doc.id
-        return mensaje_pregunta_actual(doc)
-
-    pend = pregunta_pendiente(doc)
-    if pend is None:
-        sesion.documento_en_cuestionario = None
-        return None
-
-    registrar_respuesta(doc, mensaje)
-    sincronizar_informe_documento(doc)
-
-    if pregunta_pendiente(doc) is None:
-        sesion.documento_en_cuestionario = None
-        hechas, total = progreso_cuestionario(doc)
-        return (
-            f"Respuesta registrada. Cuestionario de «{doc.tipo.value}» completado "
-            f"({hechas}/{total}).\n\n"
-            "Las respuestas ya están en el informe del documento y se incluirán "
-            "en el informe global y en futuras revisiones jurídicas."
-        )
-
-    sesion.documento_en_cuestionario = doc.id
-    hechas, total = progreso_cuestionario(doc)
-    return (
-        f"Respuesta registrada ({hechas}/{total}).\n\n"
-        + mensaje_pregunta_actual(doc)
-    )
+    """Legacy no-op: la rúbrica la responde el Analista al subir el documento."""
+    sesion.documento_en_cuestionario = None
+    return None
 
 
 def crear_sesion(
@@ -331,6 +416,7 @@ def crear_sesion(
         modalidad=modalidad,
         tipo_contratacion=tipo_contratacion,
         estado=EstadoSesion.CONFIGURANDO,
+        fecha_inicio=datetime.utcnow(),
     )
     if _config_completa(sesion):
         mensaje = _activar_sesion(sesion)
@@ -357,18 +443,35 @@ def procesar_mensaje(sesion_id: str, mensaje: str) -> tuple[SesionCompliance, st
     )
 
     if sesion.estado == EstadoSesion.CONFIGURANDO:
+        # Siempre pasa por el LLM (respuesta conversacional + extracción).
+        # Si el usuario ya dijo modalidad/tipo en el texto (o el picker),
+        # se completan aunque el modelo los omita en el JSON.
         data = interpretar_turno_config(sesion, mensaje_usuario=mensaje)
-        _aplicar_extraccion_llm(sesion, data if isinstance(data, dict) else {})
+        if not isinstance(data, dict):
+            data = {}
+        data = _completar_extraccion_desde_mensaje(sesion, mensaje, data)
+        _aplicar_extraccion_llm(sesion, data)
         if _config_completa(sesion):
             respuesta = _activar_sesion(sesion)
         else:
-            respuesta = str((data or {}).get("respuesta") or "").strip()
+            respuesta = str(data.get("respuesta") or "").strip()
             if not respuesta:
-                respuesta = (
-                    "Sigamos con la configuración del expediente. "
-                    "Indica nomenclatura, modalidad y tipo de contratación "
-                    "(BIENES, OBRAS o SERVICIOS)."
+                ya_saludo = any(
+                    m.rol == RolMensaje.ASSISTANT for m in sesion.historial[:-1]
                 )
+                if ya_saludo:
+                    respuesta = (
+                        "Continuemos con el registro del expediente. "
+                        "Indícame o selecciona en pantalla el dato que falta "
+                        "(nomenclatura, modalidad o tipo de contratación)."
+                    )
+                else:
+                    respuesta = (
+                        "Bienvenido al Módulo de Compliance de Contrataciones Públicas. "
+                        "Soy el Coordinador de Compliance y estoy aquí para guiarte "
+                        "en el proceso de auditoría. "
+                        "Para comenzar, indícame la nomenclatura del expediente."
+                    )
     else:
         # Jurídico tiene prioridad sobre Q&A si el mensaje es un pedido explícito
         if _parece_pedido_juridico(mensaje):
@@ -385,8 +488,8 @@ def procesar_mensaje(sesion_id: str, mensaje: str) -> tuple[SesionCompliance, st
                     # [..., user_orig, user_dict, asst_dict]
                     # dejar user_orig y asst, quitar user_dict
                     sesion.historial.pop(-2)
-                respuesta = sesion.historial[-1].contenido
-                # no append another assistant below
+                respuesta = _texto_chat_plano(sesion.historial[-1].contenido)
+                sesion.historial[-1].contenido = respuesta
                 session_store.guardar_sesion(sesion.id, sesion)
                 return sesion, respuesta
             except ValueError as exc:
@@ -396,35 +499,53 @@ def procesar_mensaje(sesion_id: str, mensaje: str) -> tuple[SesionCompliance, st
             if nom_resp is not None:
                 respuesta = nom_resp
             else:
-                qa = _procesar_respuesta_cuestionario(sesion, mensaje)
-                if qa is not None:
-                    respuesta = qa
-                else:
-                    agent = None
-                    if sesion.modalidad and sesion.tipo_contratacion:
-                        agent = get_modalidad_agent(sesion.modalidad, sesion.tipo_contratacion)
-                    system_extra = agent.system_prompt_experto() if agent else ""
-                    docs_ctx = ""
-                    if sesion.documentos_analizados:
-                        docs_ctx = "Documentos ya auditados:\n" + "\n".join(
-                            f"- {d.tipo.value} ({d.nombre_archivo}): cumple={d.cumple}; "
-                            f"preguntas_pendientes="
-                            f"{sum(1 for p in d.preguntas_seguimiento if not p.respondida)}"
-                            for d in sesion.documentos_analizados
-                        )
-                    system_extra = (
-                        f"{system_extra}\n{docs_ctx}\n"
-                        "Si el usuario quiere revisión jurídica, indícale «revisión jurídica» "
-                        "o el botón correspondiente. Para cuestionario: «continuar cuestionario». "
-                        "Puede cambiar la nomenclatura del expediente por chat; "
-                        "modalidad y tipo de contratación no se cambian en esta sesión."
-                    ).strip()
-                    respuesta = chat_compliance(
-                        sesion,
-                        mensaje_usuario=mensaje,
-                        system_extra=system_extra,
+                _procesar_respuesta_cuestionario(sesion, mensaje)
+                agent = None
+                if sesion.modalidad and sesion.tipo_contratacion:
+                    agent = get_modalidad_agent(sesion.modalidad, sesion.tipo_contratacion)
+                docs_ctx = ""
+                if sesion.documentos_analizados:
+                    docs_ctx = "Documentos ya revisados:\n" + "\n".join(
+                        f"- {etiqueta_documento(d.tipo)} ({d.nombre_archivo}): "
+                        f"cumple={d.cumple}; "
+                        f"tipo_coincide={getattr(d, 'tipo_coincide', True)}; "
+                        f"rubrica="
+                        f"{sum(1 for p in d.preguntas_seguimiento if p.respondida)}"
+                        f"/{len(d.preguntas_seguimiento)}"
+                        for d in sesion.documentos_analizados
                     )
+                modalidad_ctx = ""
+                if agent:
+                    modalidad_ctx = (
+                        f"Modalidad activa: {etiqueta_modalidad(sesion.modalidad)}. "
+                        f"Tipo: {etiqueta_tipo_contratacion(sesion.tipo_contratacion)}.\n"
+                        f"{agent.descripcion}\n"
+                    )
+                system_extra = (
+                    f"{modalidad_ctx}{docs_ctx}\n"
+                    "Eres siempre el Coordinador de Compliance (una sola cara). "
+                    "No menciones agentes internos ni especialistas ocultos.\n"
+                    "Expediente YA registrado: no reinicies el onboarding ni "
+                    "pidas confirmar nomenclatura/modalidad/tipo otra vez.\n"
+                    "Consultas de dominio (modalidades, bienes/obras/servicios, "
+                    "legal/compliance) están permitidas en cualquier momento.\n"
+                    "Si el usuario quiere una revisión jurídica del expediente, "
+                    "indícale «revisión jurídica» o el botón de Archivos.\n"
+                    "Al subir un documento, el sistema completa la rúbrica "
+                    "automáticamente; no pidas respuestas al usuario.\n"
+                    "Si un documento se marcó como tipo incorrecto, el slot NO "
+                    "queda auditado: puede volver a subir el archivo correcto "
+                    "o reclasificarlo eligiendo el tipo real.\n"
+                    "Puede cambiar la nomenclatura por chat; modalidad y tipo "
+                    "de contratación no se cambian en esta sesión."
+                ).strip()
+                respuesta = chat_compliance(
+                    sesion,
+                    mensaje_usuario=mensaje,
+                    system_extra=system_extra,
+                )
 
+    respuesta = _texto_chat_plano(respuesta)
     sesion.historial.append(
         MensajeChat(rol=RolMensaje.ASSISTANT, contenido=respuesta, timestamp=datetime.utcnow())
     )

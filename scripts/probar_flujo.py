@@ -126,7 +126,7 @@ def main() -> int:
             with fixtures["solicitud"].open("rb") as fh:
                 up2 = client.post(
                     f"/api/sesiones/{sid}/documentos",
-                    params={"tipo_documento": "SOLICITUD_UNIDAD_USUARIA"},
+                    params={"tipo_documento": "ACTIVIDADES_PREVIAS"},
                     files={
                         "archivo": (
                             "solicitud.docx",

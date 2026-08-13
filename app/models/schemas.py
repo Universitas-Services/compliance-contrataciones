@@ -37,6 +37,14 @@ class EstadoSesion(str, Enum):
     CERRADA = "CERRADA"
 
 
+class NivelRiesgo(str, Enum):
+    """Semáforo de riesgo del expediente (derivado de hallazgos)."""
+
+    SIN_HALLAZGOS = "SIN_HALLAZGOS"
+    OBSERVACIONES = "OBSERVACIONES"
+    RIESGO_ALTO = "RIESGO_ALTO"
+
+
 class RolAgente(str, Enum):
     """Rol dentro de la dupla por modalidad."""
 
@@ -52,27 +60,52 @@ class AlcanceDictamen(str, Enum):
 
 
 class TipoDocumento(str, Enum):
-    """Catálogo unificado de documentos del expediente de selección."""
+    """Catálogo oficial de documentos auditables por modalidad."""
 
-    SOLICITUD_UNIDAD_USUARIA = "SOLICITUD_UNIDAD_USUARIA"
+    ACTIVIDADES_PREVIAS = "ACTIVIDADES_PREVIAS"
     ACTA_INICIO = "ACTA_INICIO"
     PLIEGO_CONDICIONES = "PLIEGO_CONDICIONES"
-    ACTOS_MOTIVADOS = "ACTOS_MOTIVADOS"
-    LLAMADO_INVITACION = "LLAMADO_INVITACION"
-    MODIFICACIONES_PLIEGO = "MODIFICACIONES_PLIEGO"
+    CONDICIONES_CONTRATACION = "CONDICIONES_CONTRATACION"
+    LLAMADO = "LLAMADO"
+    INVITACIONES = "INVITACIONES"
+    PUNTO_DE_CUENTA = "PUNTO_DE_CUENTA"
+    ACTO_MOTIVADO_INICIO = "ACTO_MOTIVADO_INICIO"
+
+    ACTA_RECEPCION_SOBRES = "ACTA_RECEPCION_SOBRES"
+    ACTA_APERTURA_SOBRES = "ACTA_APERTURA_SOBRES"
+
+    ACTA_RECEPCION_MV_CALIF_OFERTAS = "ACTA_RECEPCION_MV_CALIF_OFERTAS"
+    ACTA_APERTURA_MV_CALIFICACION = "ACTA_APERTURA_MV_CALIFICACION"
+    INFORME_CALIFICACION = "INFORME_CALIFICACION"
+    NOTIFICACION_CALIFICACION = "NOTIFICACION_CALIFICACION"
+    ACTA_APERTURA_OFERTAS_DEVOLUCION = "ACTA_APERTURA_OFERTAS_DEVOLUCION"
+
+    ACTA_RECEPCION_MV_CALIFICACION = "ACTA_RECEPCION_MV_CALIFICACION"
     ACTA_RECEPCION_OFERTAS = "ACTA_RECEPCION_OFERTAS"
-    OFERTAS_RECIBIDAS = "OFERTAS_RECIBIDAS"
-    INFORME_ANALISIS_RECOMENDACION = "INFORME_ANALISIS_RECOMENDACION"
-    DOCUMENTO_ADJUDICACION = "DOCUMENTO_ADJUDICACION"
-    NOTIFICACION_ADJUDICACION = "NOTIFICACION_ADJUDICACION"
+    ACTA_APERTURA_OFERTAS = "ACTA_APERTURA_OFERTAS"
+
+    ACTA_RECEPCION_CALIF_OFERTAS = "ACTA_RECEPCION_CALIF_OFERTAS"
+    ACTA_APERTURA_CALIF_OFERTAS = "ACTA_APERTURA_CALIF_OFERTAS"
+
+    OFERTAS = "OFERTAS"
+    GARANTIA_SOSTENIMIENTO_OFERTA = "GARANTIA_SOSTENIMIENTO_OFERTA"
+
+    INFORME_EVALUACION_RECOMENDACION = "INFORME_EVALUACION_RECOMENDACION"
+    INFORME_RECOMENDACION = "INFORME_RECOMENDACION"
+    INFORME_VERIFICACION_RAZONABILIDAD = "INFORME_VERIFICACION_RAZONABILIDAD"
+    INFORME_VERIFICACION_ADJUDICACION = "INFORME_VERIFICACION_ADJUDICACION"
+    INFORME_OPINION_COMISION = "INFORME_OPINION_COMISION"
+
+    ADJUDICACION_O_EQUIVALENTE = "ADJUDICACION_O_EQUIVALENTE"
+    ADJUDICACION_ACTO_MOTIVADO = "ADJUDICACION_ACTO_MOTIVADO"
+
+    NOTIFICACION_ADJUDICADOS = "NOTIFICACION_ADJUDICADOS"
+    NOTIFICACION_NO_ADJUDICADOS = "NOTIFICACION_NO_ADJUDICADOS"
+    NOTIFICACION_INTERESADOS = "NOTIFICACION_INTERESADOS"
+
     CONTRATO = "CONTRATO"
-    JUSTIFICACION_CONTRATACION_DIRECTA = "JUSTIFICACION_CONTRATACION_DIRECTA"
-    INVITACION_CERRADA = "INVITACION_CERRADA"
-    SOLICITUD_COTIZACIONES = "SOLICITUD_COTIZACIONES"
-    COMPARATIVO_PRECIOS = "COMPARATIVO_PRECIOS"
-    ACTA_APERTURA_TECNICA = "ACTA_APERTURA_TECNICA"
-    ACTA_APERTURA_ECONOMICA = "ACTA_APERTURA_ECONOMICA"
-    DOCUMENTO_EXCLUSION = "DOCUMENTO_EXCLUSION"
+    RESPONSABILIDAD_SOCIAL = "RESPONSABILIDAD_SOCIAL"
+
     OTROS = "OTROS"
 
 
@@ -91,15 +124,29 @@ class Observacion(BaseModel):
     descripcion: str
     subsanacion: str | None = None
     ref: str | None = None
+    codigo_pregunta: str | None = None
+    fundamento_legal: str | None = None
+    rango_criticidad: str | None = None
+    accion_legal: str | None = None
+    advertencia_gerencia: str | None = None
 
 
 class PreguntaSeguimiento(BaseModel):
-    """Pregunta preestablecida asociada a un documento auditado."""
+    """Ítem de rúbrica: el Analista responde contra el documento (no el usuario)."""
 
     id: str
     texto: str
     respondida: bool = False
     respuesta: str | None = None
+    # si | no | parcial | na | no_consta
+    estado: Literal["si", "no", "parcial", "na", "no_consta"] | None = None
+    ref: str | None = None
+    respondida_por: Literal["agente", "usuario"] = "agente"
+    codigo_pregunta: str | None = None
+    fundamento_legal: str | None = None
+    rango_criticidad: str | None = None
+    accion_legal: str | None = None
+    advertencia_gerencia: str | None = None
 
 
 class SlotChecklist(BaseModel):
@@ -129,6 +176,32 @@ class ExtraccionMeta(BaseModel):
     cobertura_ocr: float | None = None
 
 
+class MontoClave(BaseModel):
+    """Monto relevante extraído del documento (para memoria cruzada)."""
+
+    etiqueta: str
+    texto: str = ""
+    valor_num: float | None = None
+    moneda: str | None = None
+
+
+class PlazoClave(BaseModel):
+    """Plazo o fecha relevante extraída del documento."""
+
+    etiqueta: str
+    texto: str
+
+
+class HechosClave(BaseModel):
+    """Hechos estructurados del documento para cross-validation del expediente."""
+
+    montos: list[MontoClave] = Field(default_factory=list)
+    plazos: list[PlazoClave] = Field(default_factory=list)
+    partes: list[str] = Field(default_factory=list)
+    nomenclatura_encontrada: str | None = None
+    otros: list[str] = Field(default_factory=list)
+
+
 class DocumentoAnalizado(BaseModel):
     """Resultado del análisis de un documento cargado a la sesión."""
 
@@ -145,6 +218,9 @@ class DocumentoAnalizado(BaseModel):
     tipo_detectado: str | None = None
     texto_extraido: str = ""
     extraccion: ExtraccionMeta | None = None
+    hechos_clave: HechosClave = Field(default_factory=HechosClave)
+    # Semáforo del Analista: Verde | Amarillo | Rojo
+    estatus_global: Literal["Verde", "Amarillo", "Rojo"] | None = None
 
 
 class DictamenJuridico(BaseModel):
@@ -167,6 +243,8 @@ class SesionCompliance(BaseModel):
     modalidad: Modalidad | None = None
     tipo_contratacion: TipoContratacion | None = None
     estado: EstadoSesion = EstadoSesion.CONFIGURANDO
+    # Sesiones antiguas pueden no traer este campo; el listado hace fallback.
+    fecha_inicio: datetime | None = None
     historial: list[MensajeChat] = Field(default_factory=list)
     checklist_slots: list[SlotChecklist] = Field(default_factory=list)
     documentos_analizados: list[DocumentoAnalizado] = Field(default_factory=list)
@@ -187,6 +265,21 @@ class SesionResumen(BaseModel):
     estado: EstadoSesion
     docs_count: int = 0
     updated_hint: str | None = None
+    fecha_inicio: str | None = None
+    docs_revisados: int = 0
+    docs_totales: int = 0
+    progreso_pct: int = 0
+    riesgo: NivelRiesgo = NivelRiesgo.SIN_HALLAZGOS
+
+
+class SesionesListaResponse(BaseModel):
+    """Listado paginado de sesiones (GET /api/sesiones/)."""
+
+    items: list[SesionResumen]
+    total: int
+    page: int
+    page_size: int
+    pages: int
 
 
 class CrearSesionRequest(BaseModel):

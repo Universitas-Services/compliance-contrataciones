@@ -5,17 +5,11 @@ Auditoría conversacional de contrataciones públicas (Venezuela):
 orquestador + dupla Analista/Jurídico por modalidad.
 """
 
-from pathlib import Path
-
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
-from fastapi.staticfiles import StaticFiles
 
 from app.core.security import SecurityHeadersMiddleware, cors_origins
 from app.routers import sesiones
-
-FRONTEND_DIR = Path(__file__).resolve().parent.parent / "frontend"
 
 app = FastAPI(
     title="compliance-contrataciones",
@@ -44,19 +38,3 @@ app.include_router(sesiones.router, prefix="/api")
 @app.get("/health")
 def health():
     return {"status": "ok", "version": "0.4.0", "service": "compliance-contrataciones"}
-
-
-@app.get("/")
-def ui_root():
-    index = FRONTEND_DIR / "index.html"
-    if not index.exists():
-        return {
-            "status": "ok",
-            "service": "compliance-contrataciones",
-            "docs": "/docs",
-        }
-    return FileResponse(index)
-
-
-if FRONTEND_DIR.exists():
-    app.mount("/static", StaticFiles(directory=FRONTEND_DIR), name="static")
