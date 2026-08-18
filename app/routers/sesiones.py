@@ -86,8 +86,23 @@ _LLM_ERRORS = (
 
 def _http_from_llm(exc: BaseException) -> HTTPException:
     """Mapea fallos del LLM a respuestas HTTP con detail usable en el front."""
-    if isinstance(exc, APITimeoutError):
-        return HTTPException(status_code=504, detail="Timeout del modelo LLM.")
+    status = getattr(exc, "status_code", None)
+    raw = str(exc).lower()
+    if (
+        isinstance(exc, APITimeoutError)
+        or status in {504, 524, 408}
+        or "origin_response_timeout" in raw
+        or "error 524" in raw
+        or "timed out" in raw
+    ):
+        return HTTPException(
+            status_code=504,
+            detail=(
+                "El modelo tardó demasiado en responder. "
+                "Reintenta en unos segundos; si el documento es muy largo, "
+                "vuelve a subirlo."
+            ),
+        )
     if isinstance(exc, RateLimitError):
         return HTTPException(
             status_code=429,
@@ -559,6 +574,7 @@ async def cargar_documento(
                 "codigo": it.codigo,
                 "texto": it.texto,
                 "rango_criticidad": it.rango_criticidad,
+                "fundamento_legal": it.fundamento_legal,
             }
             for it in cuest.items
         ]

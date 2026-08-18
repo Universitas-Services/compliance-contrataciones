@@ -100,23 +100,15 @@ def _aplicar_extraccion_llm(sesion: SesionCompliance, data: dict) -> list[str]:
     if nueva_nom is not None:
         cambios.append(f"nomenclatura={nueva_nom}")
     if not sesion.modalidad:
-        raw = data.get("modalidad")
-        if isinstance(raw, str) and raw.strip():
-            key = raw.strip().upper().replace(" ", "_").replace("-", "_")
-            for m in Modalidad:
-                if m.value == key or m.name == key:
-                    sesion.modalidad = m
-                    cambios.append(f"modalidad={m.value}")
-                    break
+        m = _resolver_modalidad(data.get("modalidad"))
+        if m is not None:
+            sesion.modalidad = m
+            cambios.append(f"modalidad={m.value}")
     if not sesion.tipo_contratacion:
-        raw = data.get("tipo_contratacion")
-        if isinstance(raw, str) and raw.strip():
-            key = raw.strip().upper()
-            for t in TipoContratacion:
-                if t.value == key or t.name == key:
-                    sesion.tipo_contratacion = t
-                    cambios.append(f"tipo_contratacion={t.value}")
-                    break
+        t = _resolver_tipo(data.get("tipo_contratacion"))
+        if t is not None:
+            sesion.tipo_contratacion = t
+            cambios.append(f"tipo_contratacion={t.value}")
     return cambios
 
 
@@ -124,13 +116,14 @@ def _match_modalidad(texto: str) -> Modalidad | None:
     t = texto.strip()
     if not t:
         return None
-    key = t.upper().replace(" ", "_").replace("-", "_")
+    key = _norm_txt(t).upper().replace(" ", "_").replace("-", "_")
     for m in Modalidad:
         if t == m.value or key == m.value or key == m.name:
             return m
-    # etiquetas legibles (por si el front envía label)
+    # etiquetas legibles (picker / texto del usuario)
+    t_n = _norm_txt(t)
     for m in Modalidad:
-        if etiqueta_modalidad(m).strip().lower() == t.lower():
+        if _norm_txt(etiqueta_modalidad(m).strip()) == t_n:
             return m
     return None
 
@@ -139,7 +132,7 @@ def _match_tipo_contratacion(texto: str) -> TipoContratacion | None:
     t = texto.strip()
     if not t:
         return None
-    key = t.upper().replace(" ", "_")
+    key = _norm_txt(t).upper().replace(" ", "_")
     for tipo in TipoContratacion:
         if key == tipo.value or key == tipo.name:
             return tipo
@@ -150,7 +143,7 @@ def _match_tipo_contratacion(texto: str) -> TipoContratacion | None:
         "servicio": TipoContratacion.SERVICIOS,
         "servicios": TipoContratacion.SERVICIOS,
     }
-    return labels.get(t.lower())
+    return labels.get(_norm_txt(t))
 
 
 def _norm_txt(s: str) -> str:
@@ -213,35 +206,88 @@ def _detectar_modalidad_en_texto(mensaje: str) -> Modalidad | None:
     return None
 
 
+def _resolver_modalidad(raw: object) -> Modalidad | None:
+    if not isinstance(raw, str) or not raw.strip():
+        return None
+    return _detectar_modalidad_en_texto(raw.strip())
+
+
+def _resolver_tipo(raw: object) -> TipoContratacion | None:
+    if not isinstance(raw, str) or not raw.strip():
+        return None
+    return _match_tipo_contratacion(raw) or _detectar_tipo_en_texto(raw)
+
+
 def _completar_extraccion_desde_mensaje(
     sesion: SesionCompliance,
     mensaje: str,
     data: dict,
 ) -> dict:
-    """Rellena modalidad/tipo si el LLM los omitió pero el usuario ya los dijo."""
+    """Rellena o corrige modalidad/tipo si el LLM los omitió o mandó un nombre no-enum."""
     out = dict(data)
-    # Picker exacto (mensaje corto = código del OptionPicker)
-    corto = mensaje.strip()
-    if len(corto) <= 80 and "\n" not in corto:
-        if not sesion.modalidad and not out.get("modalidad"):
-            mod = _match_modalidad(corto)
-            if mod is not None:
-                out["modalidad"] = mod.value
-        if not sesion.tipo_contratacion and not out.get("tipo_contratacion"):
-            tipo = _match_tipo_contratacion(corto)
-            if tipo is not None:
-                out["tipo_contratacion"] = tipo.value
-
-    # Texto libre / mensaje largo
-    if not sesion.modalidad and not out.get("modalidad"):
-        mod = _detectar_modalidad_en_texto(mensaje)
-        if mod is not None:
-            out["modalidad"] = mod.value
-    if not sesion.tipo_contratacion and not out.get("tipo_contratacion"):
-        tipo = _detectar_tipo_en_texto(mensaje)
-        if tipo is not None:
-            out["tipo_contratacion"] = tipo.value
+    if not sesion.modalidad:
+        m = _resolver_modalidad(out.get("modalidad")) or _detectar_modalidad_en_texto(
+            mensaje
+        )
+        if m is not None:
+            out["modalidad"] = m.value
+        else:
+            out["modalidad"] = None
+    if not sesion.tipo_contratacion:
+        solo_modalidad = (
+            _detectar_modalidad_en_texto(mensaje) is not None
+            and _match_tipo_contratacion(mensaje.strip()) is None
+            and _detectar_tipo_en_texto(mensaje) is None
+        )
+        if solo_modalidad:
+            out["tipo_contratacion"] = None
+        else:
+            t = _resolver_tipo(out.get("tipo_contratacion"))
+            if t is None:
+                t = _match_tipo_contratacion(mensaje.strip())
+            if t is None:
+                t = _detectar_tipo_en_texto(mensaje)
+            out["tipo_contratacion"] = t.value if t is not None else None
     return out
+
+
+def _es_seleccion_corta_registro(mensaje: str) -> bool:
+    """Clic del picker o frase corta que es modalidad/tipo, no una pregunta."""
+    corto = (mensaje or "").strip()
+    if not corto or len(corto) > 80 or "\n" in corto or "?" in corto:
+        return False
+    low = _norm_txt(corto)
+    if any(k in low for k in ("que dice", "articulo", "art.", "explica", "diferencia")):
+        return False
+    return (
+        _detectar_modalidad_en_texto(corto) is not None
+        or _match_tipo_contratacion(corto) is not None
+    )
+
+
+def _pista_eleccion_registro(sesion: SesionCompliance, mensaje: str) -> str:
+    """Ayuda al LLM: el mensaje es una elección de dato, no una consulta legal."""
+    if not _es_seleccion_corta_registro(mensaje):
+        return ""
+    if not sesion.modalidad:
+        mod = _detectar_modalidad_en_texto(mensaje)
+        if mod is not None and _match_tipo_contratacion(mensaje.strip()) is None:
+            return (
+                f"El usuario ACABA DE ELEGIR la modalidad «{etiqueta_modalidad(mod)}» "
+                f"para este expediente. En JSON usa modalidad={mod.value}. "
+                "Confirma el registro en 'respuesta' y pide el tipo (bienes, obra o "
+                "servicio) si aún falta. NO es una pregunta jurídica ni una "
+                "comparación de normativas."
+            )
+    if not sesion.tipo_contratacion:
+        tipo = _match_tipo_contratacion(mensaje.strip())
+        if tipo is not None:
+            return (
+                f"El usuario ACABA DE ELEGIR el tipo «{etiqueta_tipo_contratacion(tipo)}». "
+                f"En JSON usa tipo_contratacion={tipo.value}. Confirma y pide lo que "
+                "falte (modalidad si aún no está)."
+            )
+    return ""
 
 
 def _parece_pedido_juridico(mensaje: str) -> bool:
@@ -443,10 +489,10 @@ def procesar_mensaje(sesion_id: str, mensaje: str) -> tuple[SesionCompliance, st
     )
 
     if sesion.estado == EstadoSesion.CONFIGURANDO:
-        # Siempre pasa por el LLM (respuesta conversacional + extracción).
-        # Si el usuario ya dijo modalidad/tipo en el texto (o el picker),
-        # se completan aunque el modelo los omita en el JSON.
-        data = interpretar_turno_config(sesion, mensaje_usuario=mensaje)
+        pista = _pista_eleccion_registro(sesion, mensaje)
+        data = interpretar_turno_config(
+            sesion, mensaje_usuario=mensaje, pista_dato=pista
+        )
         if not isinstance(data, dict):
             data = {}
         data = _completar_extraccion_desde_mensaje(sesion, mensaje, data)
