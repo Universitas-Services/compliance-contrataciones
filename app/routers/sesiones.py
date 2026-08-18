@@ -521,6 +521,13 @@ def obtener_sesion(sesion_id: str) -> SesionCompliance:
     return _require_sesion(sesion_id)
 
 
+@router.put("/{sesion_id}", response_model=SesionCompliance)
+def restaurar_sesion(sesion_id: str, body: SesionCompliance) -> SesionCompliance:
+    """Rehidrata una sesión (p. ej. snapshot en cache del portal) en esta instancia."""
+    snapshot = body.model_copy(update={"id": sesion_id})
+    return session_store.guardar_sesion(sesion_id, snapshot)
+
+
 @router.get("/{sesion_id}/checklist")
 def obtener_checklist(sesion_id: str):
     sesion = _require_sesion(sesion_id)

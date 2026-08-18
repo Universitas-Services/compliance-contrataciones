@@ -7,10 +7,13 @@ Persistimos en data/sesiones.json para conservar historial y contexto.
 from __future__ import annotations
 
 import json
+import logging
 import threading
 from pathlib import Path
 
 from app.models.schemas import SesionCompliance
+
+logger = logging.getLogger(__name__)
 
 _LOCK = threading.Lock()
 _sesiones: dict[str, SesionCompliance] = {}
@@ -44,8 +47,14 @@ def _persist() -> None:
     _STORE_PATH.parent.mkdir(parents=True, exist_ok=True)
     payload = {sid: s.model_dump(mode="json") for sid, s in _sesiones.items()}
     tmp = _STORE_PATH.with_suffix(".tmp")
-    tmp.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
-    tmp.replace(_STORE_PATH)
+    try:
+        tmp.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+        tmp.replace(_STORE_PATH)
+    except OSError:
+        logger.warning(
+            "No se pudo persistir sesiones en %s (disco efímero?). Quedan solo en memoria.",
+            _STORE_PATH,
+        )
 
 
 def get_sesion(sesion_id: str) -> SesionCompliance | None:

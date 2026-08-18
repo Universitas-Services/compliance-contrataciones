@@ -1,0 +1,16 @@
+steps:
+  - name: gcr.io/cloud-builders/docker
+    args:
+      - build
+      - --platform=linux/amd64
+      - -t
+      - us-east4-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/compliance-contrataciones:$BUILD_ID
+      - -t
+      - us-east4-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/compliance-contrataciones:latest
+      - .
+images:
+  - us-east4-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/compliance-contrataciones:$BUILD_ID
+  - us-east4-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/compliance-contrataciones:latest
+options:
+  logging: CLOUD_LOGGING_ONLY
+  machineType: E2_HIGHCPU_8
