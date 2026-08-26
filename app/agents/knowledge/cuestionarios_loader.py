@@ -56,6 +56,13 @@ _ART_RE = re.compile(
     r"(?=\n\s*(?:\*\*)?(?:RANGO|CRITICIDAD|Ponderaci[oó]n|Respuesta))",
     re.IGNORECASE | re.DOTALL,
 )
+# Formato detallado: texto íntegro de artículos bajo el bloque de fundamento.
+_FUND_DETALLADO_RE = re.compile(
+    r"FUNDAMENTO\s+LEGAL\s+(?:VIOLENTADO|APLICABLE)"
+    r"(?:\s+EN\s+CASO\s+DE\s+NO)?\s*:?\s*"
+    r"(?P<val>.+)",
+    re.IGNORECASE | re.DOTALL,
+)
 _TIPO_PREF_RE = re.compile(
     r"^\(\s*(BIENES|OBRAS|SERVICIOS|URGENCIA)\s*\)\s*",
     re.IGNORECASE,
@@ -151,9 +158,14 @@ def _parse_items(markdown: str) -> list[ItemCuestionario]:
         bloque = markdown[start:end]
 
         fund = None
-        art_m = _ART_RE.search(bloque)
-        if art_m:
-            fund = _limpiar(art_m.group("val"))
+        # Preferir bloque detallado (texto íntegro de artículos); si no, cita corta.
+        fund_m = _FUND_DETALLADO_RE.search(bloque)
+        if fund_m:
+            fund = _limpiar(fund_m.group("val"))
+        else:
+            art_m = _ART_RE.search(bloque)
+            if art_m:
+                fund = _limpiar(art_m.group("val"))
 
         crit = None
         crit_m = _CRIT_RE.search(bloque)
@@ -238,7 +250,11 @@ def textos_preguntas(cuest: CuestionarioDocumento) -> list[str]:
 
 
 def formato_cuestionario_compacto(cuest: CuestionarioDocumento) -> str:
-    """Versión liviana para el LLM (sin acción/advertencia largas; esas viven en BD)."""
+    """Versión liviana para el LLM (sin acción/advertencia largas; esas viven en BD).
+
+    Si el fundamento trae texto íntegro de artículos (formato detallado), se deja
+    más margen para que el Analista cite sin inventar.
+    """
     lineas: list[str] = [
         f"Cuestionario oficial — {cuest.tipo_documento.value} "
         f"({len(cuest.items)} ítems). Responde TODOS los códigos."
@@ -249,7 +265,9 @@ def formato_cuestionario_compacto(cuest: CuestionarioDocumento) -> str:
             lineas.append(f"  Criticidad: {it.rango_criticidad}")
         if it.fundamento_legal:
             fund = it.fundamento_legal
-            if len(fund) > 220:
-                fund = fund[:220].rstrip() + "…"
+            # Cita corta vs. texto íntegro embebido en el MD
+            limite = 1800 if len(fund) > 400 else 220
+            if len(fund) > limite:
+                fund = fund[:limite].rstrip() + "…"
             lineas.append(f"  Fundamento: {fund}")
     return "\n".join(lineas)
