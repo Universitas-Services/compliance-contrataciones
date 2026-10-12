@@ -1310,6 +1310,8 @@ def _evaluar_lote_rubrica(
         "monto, número o frase breve del documento que justifica el estado.\n"
         "- ref: sección, punto, tabla o página real del documento (null si no "
         "consta).\n"
+        "- Si la pregunta depende del tipo de contrato (plazos, montos, "
+        "umbrales), aplica SOLO los valores del tipo de contrato de la sesión.\n"
         "- No cites artículos en la respuesta ni devuelvas fundamento_legal, "
         "acción o advertencia: eso lo aporta el cuestionario oficial.\n"
         f"SOLO JSON: {JSON_SHAPE_RUBRICA_LOTE}"

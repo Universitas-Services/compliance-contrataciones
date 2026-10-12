@@ -396,7 +396,7 @@ def construir_informe_usuario_markdown(
             fund = fund.rstrip(".")
             bloque = (
                 f"Hallazgo {i} ({cod}, criticidad {crit}): se observa "
-                f"{grado}. {cuerpo}."
+                f"{grado}. {cuerpo}{'' if cuerpo.endswith('…') else '.'}"
             )
             if fund:
                 bloque += f" Fundamento: {fund}."
