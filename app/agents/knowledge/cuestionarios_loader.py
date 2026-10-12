@@ -36,21 +36,32 @@ _ITEM_RE = re.compile(
     re.MULTILINE,
 )
 
+# `\**` antes de los dos puntos: tolera «**ACCIÓN LEGAL**:» (dos puntos fuera
+# de la negrita), frecuente en los cuestionarios con fundamento detallado.
 _CRIT_RE = re.compile(
     r"(?:RANGO\s*S?\s*DE\s+CRITICIDAD|SIRITICIDAD|CRITICIDAD|"
-    r"Ponderaci[oó]n)\s*:\s*(?P<crit>[^\n*]+)",
+    r"Ponderaci[oó]n)\s*\**\s*:\s*(?P<crit>[^\n*]+)",
     re.IGNORECASE,
 )
 _ACCION_RE = re.compile(
-    r"ACCI[ÓO]N\s+LEGAL\s*:\s*(?P<val>.+?)"
+    r"ACCI[ÓO]N\s+LEGAL\s*\**\s*:\s*(?P<val>.+?)"
     r"(?=\n\s*(?:\*\*)?ADVERTENCIA|\*\*\s*ADVERTENCIA|\n\s*\*\*[A-Z]|\Z)",
     re.IGNORECASE | re.DOTALL,
 )
 _ADV_RE = re.compile(
-    r"ADVERTENCIA(?:\s+(?:PARA\s+LA\s+|A\s+LA\s+)?GERENCIA)?\s*:\s*(?P<val>.+?)"
+    r"ADVERTENCIA(?:\s+(?:PARA\s+LA\s+|A\s+LA\s+)?GERENCIA)?\s*\**\s*:\s*(?P<val>.+?)"
     r"(?=\n\s*(?:\*\*)?(?:CA|CD)[A-ZÁÉÍÓÚÑ]{2,}|\n\s*\*\*[A-ZÁÉÍÓÚÑ]{3,}|\Z)",
     re.IGNORECASE | re.DOTALL,
 )
+# Etiqueta explícita de alcance por tipo de contrato:
+# «**APLICA_A:** BIENES; SERVICIOS» (TODOS = los tres).
+_APLICA_A_RE = re.compile(
+    r"^[ \t]*(?:\*\*)?\s*APLICA[_ ]?A\s*\**\s*:\s*\**(?P<val>[^\n]*)\n?",
+    re.IGNORECASE | re.MULTILINE,
+)
+_TIPOS_CONTRATO = frozenset({"BIENES", "OBRAS", "SERVICIOS"})
+# Preámbulo condicional válido antes del «¿» (p. ej. «Si la contratación…,»).
+_PREAMBULO_RE = re.compile(r"[A-Za-zÁÉÍÓÚÑáéíóúñ]{2,}(?:\W+[A-Za-zÁÉÍÓÚÑáéíóúñ]+){2,}")
 _ART_RE = re.compile(
     r"(?:\*\*)?(?:Art[ií]culos?|Base\s+Legal|ART[ÍI]CULOS)\*?\*?\s*:?\s*"
     r"(?P<val>.+?)"
@@ -81,6 +92,8 @@ class ItemCuestionario:
     rango_criticidad: str | None = None
     accion_legal: str | None = None
     advertencia_gerencia: str | None = None
+    # Tipos de contrato declarados con APLICA_A; None = sin etiqueta (heurística).
+    aplica_a: frozenset[str] | None = None
 
 
 @dataclass(frozen=True)
@@ -117,9 +130,14 @@ def _extraer_pregunta(pre_close: str, body: str) -> str | None:
     if pm:
         pref = f"({pm.group(1).upper()}) "
         raw = _limpiar(raw[pm.end() :])
-    # Tomar desde el primer ¿ si existe (permite preámbulo antes)
+    # Tomar desde el primer ¿; si antes hay una condición en prosa
+    # («Si la contratación…, ¿…?») se conserva, porque da sentido a la pregunta.
     if "¿" in raw:
-        raw = raw[raw.index("¿") :]
+        idx = raw.index("¿")
+        preambulo = raw[:idx].strip(" .-:")
+        raw = raw[idx:]
+        if _PREAMBULO_RE.search(preambulo):
+            raw = f"{preambulo} {raw}"
     else:
         raw = "¿" + raw
     # Cerrar en el último ? de la línea (por si hay ? intermedios raros)
@@ -127,6 +145,30 @@ def _extraer_pregunta(pre_close: str, body: str) -> str | None:
         raw = raw[: raw.rindex("?") + 1]
     texto = f"{pref}{raw}" if pref else raw
     return texto if len(raw) > 2 else None
+
+
+def _parse_aplica_a(valor: str, codigo: str) -> frozenset[str] | None:
+    """«BIENES; SERVICIOS» → frozenset. TODOS = los tres. Inválido → None (heurística)."""
+    tokens = [
+        t.strip().upper()
+        for t in re.split(r"[;,/]|\s+y\s+", re.sub(r"\*+", "", valor or ""))
+        if t.strip()
+    ]
+    if not tokens:
+        logger.warning("APLICA_A vacío en %s; se usa la heurística", codigo)
+        return None
+    tipos: set[str] = set()
+    for t in tokens:
+        if t in {"TODOS", "TODAS"}:
+            return _TIPOS_CONTRATO
+        t = {"BIEN": "BIENES", "OBRA": "OBRAS", "SERVICIO": "SERVICIOS"}.get(t, t)
+        if t not in _TIPOS_CONTRATO:
+            logger.warning(
+                "APLICA_A inválido en %s: %r; se usa la heurística", codigo, valor
+            )
+            return None
+        tipos.add(t)
+    return frozenset(tipos)
 
 
 def _parse_items(markdown: str) -> list[ItemCuestionario]:
@@ -161,6 +203,14 @@ def _parse_items(markdown: str) -> list[ItemCuestionario]:
         end = matches[i + 1].start() if i + 1 < len(matches) else len(markdown)
         bloque = markdown[start:end]
 
+        # APLICA_A se lee y se retira del bloque: así no se cuela en el
+        # fundamento aunque la etiqueta esté debajo del «FUNDAMENTO LEGAL».
+        aplica_a = None
+        ap_m = _APLICA_A_RE.search(bloque)
+        if ap_m:
+            aplica_a = _parse_aplica_a(ap_m.group("val"), codigo)
+            bloque = bloque[: ap_m.start()] + bloque[ap_m.end() :]
+
         fund = None
         # Preferir bloque detallado (texto íntegro de artículos); si no, cita corta.
         fund_m = _FUND_DETALLADO_RE.search(bloque)
@@ -193,6 +243,7 @@ def _parse_items(markdown: str) -> list[ItemCuestionario]:
             rango_criticidad=crit or None,
             accion_legal=accion or None,
             advertencia_gerencia=adv or None,
+            aplica_a=aplica_a,
         )
         if codigo in seen:
             # Duplicado: conservar el que traiga más metadatos (p. ej. CDACTO.19).
@@ -266,7 +317,9 @@ def alcance_tipo_contrato(texto: str) -> frozenset[str] | None:
         if g in {"BIENES", "OBRAS", "SERVICIOS"}:
             return frozenset({g})
 
-    tl = raw.lower()
+    # La heurística mira solo la pregunta: el preámbulo condicional
+    # («En adquisiciones que superen 5.000 UCAU Bienes, …») no define el tipo.
+    tl = raw[raw.index("¿") :].lower() if "¿" in raw else raw.lower()
     # Preguntas que aplican a obra O servicio (no bienes).
     if re.search(
         r"obra o se prestar[ií]a el servicio|obra o(?:\s+se)?\s+servicio|"
@@ -335,12 +388,19 @@ def alcance_tipo_contrato(texto: str) -> frozenset[str] | None:
     return None
 
 
-def item_aplica_a_tipo(texto: str, tipo_contratacion: str) -> bool:
-    """True si la pregunta debe evaluarse con el tipo de contrato de la sesión."""
+def item_aplica_a_tipo(
+    texto: str,
+    tipo_contratacion: str,
+    aplica_a: frozenset[str] | None = None,
+) -> bool:
+    """True si la pregunta debe evaluarse con el tipo de contrato de la sesión.
+
+    La etiqueta APLICA_A del cuestionario manda; sin ella se infiere del texto.
+    """
     tipo = (tipo_contratacion or "").strip().upper()
     if not tipo:
         return True
-    alcance = alcance_tipo_contrato(texto)
+    alcance = aplica_a if aplica_a is not None else alcance_tipo_contrato(texto)
     if alcance is None:
         return True
     return tipo in alcance
@@ -354,7 +414,7 @@ def particionar_items_por_tipo(
     aplicables: list[ItemCuestionario] = []
     na_auto: list[ItemCuestionario] = []
     for it in items:
-        if item_aplica_a_tipo(it.texto, tipo_contratacion):
+        if item_aplica_a_tipo(it.texto, tipo_contratacion, it.aplica_a):
             aplicables.append(it)
         else:
             na_auto.append(it)

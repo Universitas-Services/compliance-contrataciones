@@ -22,6 +22,30 @@ Al subir un documento, el backend busca
 
 Loader: `app/agents/knowledge/cuestionarios_loader.py`.
 
+## Formato de cada pregunta
+
+```text
+**CAAUAI.14** ¿pregunta completa?
+**RANGO DE CRITICIDAD: CRÍTICO: 5**
+**Respuesta: SI; NO; N/A**
+**APLICA_A:** BIENES
+**ACCIÓN LEGAL:** …
+**ADVERTENCIA PARA LA GERENCIA:** …
+**FUNDAMENTO LEGAL VIOLENTADO EN CASO DE NO:** …
+```
+
+- `APLICA_A`: `BIENES`, `SERVICIOS`, `OBRAS` (separados por `;`) o `TODOS`.
+  Las preguntas que no aplican al tipo de contrato de la sesión se marcan N/A
+  sin llamar al LLM. Sin etiqueta (o con un valor inválido) el tipo se
+  infiere del texto de la pregunta.
+- Una condición previa al `¿` («Si la contratación…, ¿…?») se conserva.
+
+Validar antes de copiar al repo o subir a GCS:
+
+```bash
+python -m scripts.validar_cuestionarios [carpeta] [--exigir-aplica-a]
+```
+
 ## Estado actual
 
 | Modalidad | Archivos |
