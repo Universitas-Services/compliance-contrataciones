@@ -1280,6 +1280,7 @@ def _evaluar_lote_rubrica(
     lote_idx: int,
     total_lotes: int,
     texto_doc: str,
+    calendario: str = "",
 ) -> list[dict]:
     ids = [it["codigo"] for it in lote]
     system = (
@@ -1312,7 +1313,14 @@ def _evaluar_lote_rubrica(
         "consta).\n"
         "- Si la pregunta depende del tipo de contrato (plazos, montos, "
         "umbrales), aplica SOLO los valores del tipo de contrato de la sesión.\n"
-        "- No cites artículos en la respuesta ni devuelvas fundamento_legal, "
+        + (
+            "- Para días hábiles, días de la semana o feriados usa SOLO el "
+            "CALENDARIO DEL DOCUMENTO (no cuentes de memoria) y cita en la "
+            "respuesta el conteo obtenido.\n"
+            if calendario
+            else ""
+        )
+        + "- No cites artículos en la respuesta ni devuelvas fundamento_legal, "
         "acción o advertencia: eso lo aporta el cuestionario oficial.\n"
         f"SOLO JSON: {JSON_SHAPE_RUBRICA_LOTE}"
     )
@@ -1328,7 +1336,8 @@ def _evaluar_lote_rubrica(
         f"Lote {lote_idx}/{total_lotes} — ítems a evaluar (1:1):\n"
         f"{_formato_lote_items(lote)}\n\n"
         f"{kb_lote}\n\n"
-        f"TEXTO DEL DOCUMENTO:\n{texto_doc}"
+        + (f"{calendario}\n\n" if calendario else "")
+        + f"TEXTO DEL DOCUMENTO:\n{texto_doc}"
     )
     raw = _llamar_modelo(
         system=system,
@@ -1377,6 +1386,7 @@ def analizar_documento(
 ) -> dict:
     """Analiza un documento: identidad/coherencia + rúbrica por lotes."""
     from app.agents.knowledge import etiqueta_documento, etiqueta_tipo_contratacion
+    from app.agents.knowledge.calendario import bloque_calendario
     from app.models.schemas import TipoContratacion
 
     reset_llm_usage()
@@ -1573,6 +1583,7 @@ def analizar_documento(
             logger.info("Cuestionario MD presente sin ítems estructurados.")
 
         texto_doc = _texto_plano_documento(contenido, chunks)
+        calendario = bloque_calendario(texto_doc)
         esperados_llm = [it["codigo"] for it in items]
         lotes = [
             items[i : i + _RUBRICA_LOTE_TAM]
@@ -1588,6 +1599,7 @@ def analizar_documento(
                 lote_idx=idx,
                 total_lotes=len(lotes),
                 texto_doc=texto_doc,
+                calendario=calendario,
             )
             rubrica_acc = _merge_rubrica_por_codigo(rubrica_acc, parcial)
 
@@ -1609,6 +1621,7 @@ def analizar_documento(
                         (len(lote_retry) + _RUBRICA_LOTE_TAM - 1) // _RUBRICA_LOTE_TAM,
                     ),
                     texto_doc=texto_doc,
+                    calendario=calendario,
                 )
                 rubrica_acc = _merge_rubrica_por_codigo(rubrica_acc, parcial)
 
