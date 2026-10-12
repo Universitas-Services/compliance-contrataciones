@@ -263,9 +263,16 @@ def construir_json_analista(
     tipo_contrato: str,
     estatus_global: str,
     hallazgos: list[HallazgoAnalista],
+    preguntas: list[PreguntaSeguimiento] | None = None,
 ) -> dict:
-    """Parte 2 del formato Mariana (objeto estructurado)."""
-    return {
+    """Parte 2 del formato Mariana (objeto estructurado).
+
+    Cada hallazgo lleva el porqué (estado, respuesta del Analista y evidencia).
+    Con `preguntas` se añaden el resumen, los conformes y los N/A justificados
+    (condicionales cuya condición no se da), para que el Jurídico vea también
+    lo que sí se cumplió. Campos aditivos: los consumidores previos no cambian.
+    """
+    out: dict = {
         "documento_evaluado": nombre_documento,
         "tipo_contrato": tipo_contrato,
         "estatus_global": estatus_global,
@@ -277,10 +284,38 @@ def construir_json_analista(
                 "rango_criticidad": h.rango_criticidad,
                 "accion_legal": h.accion_legal,
                 "advertencia_gerencia": h.advertencia_gerencia,
+                "estado": h.estado,
+                "respuesta": h.respuesta,
+                "evidencia": h.ref,
             }
             for h in hallazgos
         ],
     }
+    if preguntas is not None:
+        conformes = [p for p in preguntas if (p.estado or "").lower() == "si"]
+        no_aplica = [p for p in preguntas if (p.estado or "").lower() == "na"]
+        out["resumen"] = {
+            "evaluados": len(preguntas) - len(no_aplica),
+            "conformes": len(conformes),
+            "hallazgos": len(hallazgos),
+            "no_aplica": len(no_aplica),
+        }
+        out["conformes"] = [
+            {
+                "codigo_pregunta": (p.codigo_pregunta or p.id or "").strip(),
+                "respuesta": p.respuesta,
+                "evidencia": p.ref,
+            }
+            for p in conformes
+        ]
+        out["no_aplica"] = [
+            {
+                "codigo_pregunta": (p.codigo_pregunta or p.id or "").strip(),
+                "motivo": p.respuesta,
+            }
+            for p in no_aplica
+        ]
+    return out
 
 
 def _recortar_en_palabra(texto: str, n: int) -> str:

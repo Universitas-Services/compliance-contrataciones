@@ -801,6 +801,7 @@ async def cargar_documento(
             tipo_contrato=tipo_label,
             estatus_global=estatus_global or "Amarillo",
             hallazgos=hallazgos,
+            preguntas=preg_objs,
         )
         informe_usuario = (
             construir_informe_usuario_markdown(

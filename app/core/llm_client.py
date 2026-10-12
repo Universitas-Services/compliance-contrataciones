@@ -1711,25 +1711,21 @@ def _recorte(texto: object, n: int) -> str:
 
 
 def _expediente_para_juridico(docs: list) -> str:
-    """Resumen corto del expediente: conteos + solo hallazgos (no toda la rúbrica)."""
+    """Resumen corto del expediente: conteos + observaciones por documento.
+
+    El detalle de hallazgos (con evidencia) va una sola vez en el JSON compacto
+    de `consultar_juridico`; aquí no se repite.
+    """
     from app.agents.knowledge import etiqueta_documento
 
     bloques: list[str] = []
     for d in docs:
         preguntas = d.preguntas_seguimiento or []
         counts = {"si": 0, "na": 0, "no": 0, "parcial": 0, "no_consta": 0}
-        hallazgos: list[str] = []
         for p in preguntas:
             est = (p.estado or "").lower()
             if est in counts:
                 counts[est] += 1
-            if est in {"no", "parcial", "no_consta"}:
-                cod = p.codigo_pregunta or p.id
-                hallazgos.append(
-                    f"- [{est}] {cod}: {_recorte(p.texto, 120)} | "
-                    f"{_recorte(p.rango_criticidad, 24)} | "
-                    f"{_recorte(p.fundamento_legal, 140)}"
-                )
         obs = [
             f"- ({o.severidad}) {_recorte(o.descripcion, 160)}"
             for o in (d.observaciones or [])
@@ -1747,11 +1743,6 @@ def _expediente_para_juridico(docs: list) -> str:
             + "\n"
             f"rúbrica: si={counts['si']} na={counts['na']} no={counts['no']} "
             f"parcial={counts['parcial']} no_consta={counts['no_consta']}\n"
-            + (
-                "Hallazgos:\n" + "\n".join(hallazgos[:20]) + "\n"
-                if hallazgos
-                else "Hallazgos: ninguno (todo si/na).\n"
-            )
             + ("Observaciones:\n" + "\n".join(obs[:6]) + "\n" if obs else "")
         )
     return "\n".join(bloques) if bloques else "(sin documentos auditados)"
@@ -1807,21 +1798,25 @@ def consultar_juridico(
 
     def _pack_hallazgo(h: dict | Any) -> dict:
         if isinstance(h, dict):
-            codigo = h.get("codigo_pregunta")
-            crit = h.get("rango_criticidad")
-            accion = h.get("accion_legal")
-            adv = h.get("advertencia_gerencia")
-            fund_src = h.get("fundamento_legal")
+            get = h.get
         else:
-            codigo = getattr(h, "codigo_pregunta", None)
-            crit = getattr(h, "rango_criticidad", None)
-            accion = getattr(h, "accion_legal", None)
-            adv = getattr(h, "advertencia_gerencia", None)
-            fund_src = getattr(h, "fundamento_legal", None)
-        fund = _fundamento_para_json(fund_src, accion=accion, max_chars=280)
+            def get(k: str) -> Any:
+                return getattr(h, k, None)
+        accion = get("accion_legal")
+        adv = get("advertencia_gerencia")
+        fund = _fundamento_para_json(
+            get("fundamento_legal"), accion=accion, max_chars=280
+        )
+        resp = get("respuesta")
+        evid = get("evidencia") or get("ref")
         return {
-            "codigo": codigo,
-            "criticidad": crit,
+            "codigo": get("codigo_pregunta"),
+            "estado": get("estado"),
+            "criticidad": get("rango_criticidad"),
+            # El porqué del Analista: dato del documento + dónde está.
+            "evidencia": (
+                _recorte(resp, 200) + (f" [{evid}]" if evid else "") if resp else None
+            ),
             "fundamento": fund,
             "accion": str(accion)[:220] if accion else None,
             "advertencia": str(adv)[:160] if adv else None,
@@ -1831,17 +1826,27 @@ def consultar_juridico(
     for d in docs:
         src = getattr(d, "json_analista", None)
         if isinstance(src, dict):
-            paquetes.append(
-                {
-                    "documento": src.get("documento_evaluado") or d.nombre_archivo,
-                    "estatus": src.get("estatus_global"),
-                    "hallazgos": [
-                        _pack_hallazgo(h)
-                        for h in (src.get("hallazgos") or [])
-                        if isinstance(h, dict)
-                    ],
-                }
-            )
+            paquete = {
+                "documento": src.get("documento_evaluado") or d.nombre_archivo,
+                "tipo_documento": d.tipo.value,
+                "estatus": src.get("estatus_global"),
+                "hallazgos": [
+                    _pack_hallazgo(h)
+                    for h in (src.get("hallazgos") or [])
+                    if isinstance(h, dict)
+                ],
+            }
+            # Conformes y N/A solo como códigos: contexto para la cadena de
+            # nulidad sin inflar el prompt.
+            if src.get("conformes") is not None:
+                paquete["conformes"] = [
+                    c.get("codigo_pregunta") for c in src["conformes"] if isinstance(c, dict)
+                ]
+            if src.get("no_aplica"):
+                paquete["no_aplica"] = [
+                    c.get("codigo_pregunta") for c in src["no_aplica"] if isinstance(c, dict)
+                ]
+            paquetes.append(paquete)
         else:
             paquetes.append(
                 {
@@ -1876,7 +1881,12 @@ def consultar_juridico(
         "Sección 4: 1 párrafo de conclusión + 1 párrafo de medidas (paralización/"
         "subsanación/responsables). "
         "Prosa continua; no copies el texto de las preguntas; cita solo códigos "
-        "y artículos. Criticidad 5/3/1; Flag de Nulidad Absoluta si hay crítico 5. "
+        "y artículos. Criticidad 5/3/1; Flag de Nulidad Absoluta solo si hay un "
+        "crítico 5 con estado no/parcial. "
+        "Cada hallazgo trae 'estado' y 'evidencia' (lo que el Analista vio en el "
+        "documento): estado no/parcial = incumplimiento demostrado; no_consta = "
+        "no consta en ESE documento y puede constar en otra pieza: crúzalo con "
+        "los demás documentos y sus 'conformes' antes de imputarlo. "
         "Cita normas SOLO del basamento o de los hallazgos. "
         "OBLIGATORIO: termina la sección 4 con una frase completa; no cortes a media idea.\n"
         f"{kb_jur}"
