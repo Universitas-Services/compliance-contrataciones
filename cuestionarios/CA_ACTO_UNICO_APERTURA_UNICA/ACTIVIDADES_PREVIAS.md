@@ -5,7 +5,8 @@
 **Respuesta: SI; NO; N/A**  
 **RANGO DE CRITICIDAD:RELEVANTE: 3**  
 **ACCIÓN LEGAL:** Reposición de la causa al estado de elaboración del requerimiento por vicio en la formación del expediente.La ausencia de la solicitud por parte de la unidad competente vicia la formación del expediente de contratación (incumplimiento Art. 98 RLCP).  
-**ADVERTENCIA PARA LA GERENCIA:** La ausencia de solicitud formal por la unidad competente invalida el origen de la necesidad y la legalidad del gasto.  
+**ADVERTENCIA PARA LA GERENCIA:** La ausencia de solicitud formal por la unidad competente invalida el origen de la necesidad y la legalidad del gasto.
+
        **FUNDAMENTO LEGAL VIOLENTADO EN CASO DE NO:**   
        **Normativa principal**  
 **Artículo 6, numeral 2 de la Ley de Contrataciones Públicas:**   
@@ -119,12 +120,12 @@ Las funcionarias públicas, funcionarios públicos, empleadas públicas y emplea
 Las funcionarias, funcionarios, empleadas públicas y empleados públicos responden civil, penal, administrativa y disciplinariamente por la administración de los bienes y recursos públicos, de conformidad con lo establecido en la ley.  
 **Artículo 65 de la Ley Contra la Corrupción:**   
 La funcionaria pública o funcionario público que, con el objeto de evadir la aplicación de los procedimientos de licitación u otros controles o restricciones que establece la ley para efectuar determinada contratación, o alegare ilegalmente razones de emergencia, será penada o penado con prisión de seis (6) meses a tres (3) años. Con igual pena serán sancionadas o sancionados las funcionarias o funcionarios que otorgaren las autorizaciones o aprobaciones de tales contrataciones.  
-**Artículo 87 de la Ley de Contra la Corrupción:**  
-Serán sancionados con prisión de tres () a seis () años las funcionarias públicas o funcionarios públicos que:
+**Artículo 87 de la Ley Contra la Corrupción:**  
+"Serán sancionados con prisión de tres (3) a seis (6) años las funcionarias públicas o funcionarios públicos que:
 
 1. Por sí o por interpuesta persona se procuren alguna utilidad, ventaja o beneficio económico con ocasión de los supuestos generadores de responsabilidad administrativa previstos en los artículos 91 y 92 de la Ley Orgánica de la Contraloría General de la República y del Sistema Nacional de Control Fiscal.  
-2. Ordenen pagos por obras o servicios no realizados o defectuosamente ejecutados.  
-3. Certifiquen terminaciones de obras o prestación de servicios inexistentes o de calidades o cantidades inferiores a las contratadas, sin dejar constancia de estos hechos.
+2. Ordenen pagos por obras o servicios no realizados o defectuosamente ejecutados.     
+3. Certifiquen terminaciones de obras o prestación de servicios inexistentes o de calidades o cantidades inferiores a las contratadas, sin dejar constancia de estos hechos."
 
 **Artículo 24, literal K de las Normas de Control Interno Aplicables a Contrataciones Públicas:**  
 Para todos los procedimientos de contrataciones públicas, una vez identificada la necesidad del bien, servicio u obra, la unidad usuaria deberá efectuar las siguientes actividades previas para garantizar un adecuado proceso de selección:  
@@ -190,7 +191,7 @@ Sin perjuicio de la responsabilidad civil o penal, y de lo que dispongan otras l
 1\. La adquisición de bienes, la contratación de obras o de servicios, con inobservancia total o parcial del procedimiento de selección de contratistas que corresponda, en cada caso, según lo previsto en la Ley de Licitaciones o en la normativa aplicable.  
 **Artículo 65 de la Ley Contra la Corrupción:**   
 La funcionaria pública o funcionario público que, con el objeto de evadir la aplicación de los procedimientos de licitación u otros controles o restricciones que establece la ley para efectuar determinada contratación, o alegare ilegalmente razones de emergencia, será penada o penado con prisión de seis (6) meses a tres (3) años. Con igual pena serán sancionadas o sancionados las funcionarias o funcionarios que otorgaren las autorizaciones o aprobaciones de tales contrataciones.  
-**Artículo 87 de la Ley de Contra la Corrupción:**  
+**Artículo 87 de la Ley Contra la Corrupción:**  
 Serán sancionados con prisión de tres () a seis () años las funcionarias públicas o funcionarios públicos que:
 
 4. Por sí o por interpuesta persona se procure alguna utilidad, ventaja o beneficio económico con ocasión de los supuestos generadores de responsabilidad administrativa previstos en los artículos 91 y 92 de la Ley Orgánica de la Contraloría General de la República y del Sistema Nacional de Control Fiscal.  
@@ -435,7 +436,7 @@ Las funcionarias públicas, funcionarios públicos, empleadas públicas y emplea
 Las funcionarias, funcionarios, empleadas públicas y empleados públicos responden civil, penal, administrativa y disciplinariamente por la administración de los bienes y recursos públicos, de conformidad con lo establecido en la ley.  
 **Artículo 65 de la Ley Contra la Corrupción:**   
 La funcionaria pública o funcionario público que, con el objeto de evadir la aplicación de los procedimientos de licitación u otros controles o restricciones que establece la ley para efectuar determinada contratación, o alegare ilegalmente razones de emergencia, será penada o penado con prisión de seis (6) meses a tres (3) años. Con igual pena serán sancionadas o sancionados las funcionarias o funcionarios que otorgaren las autorizaciones o aprobaciones de tales contrataciones.  
-**Artículo 87 de la Ley de Contra la Corrupción:**  
+**Artículo 87 de la Ley Contra la Corrupción:**  
 Serán sancionados con prisión de tres () a seis () años las funcionarias públicas o funcionarios públicos que:
 
 7. Por sí o por interpuesta persona se procuren alguna utilidad, ventaja o beneficio económico con ocasión de los supuestos generadores de responsabilidad administrativa previstos en los artículos 91 y 92 de la Ley Orgánica de la Contraloría General de la República y del Sistema Nacional de Control Fiscal.  
@@ -452,18 +453,17 @@ El acto motivado para la aplicación de la Contratación Directa, emanado de la 
 **CAAUAP.11** ¿El requerimiento incluyó un presupuesto base que cumplió con la estructura de costos de precios justos?  
 **Respuesta: SI; NO; N/A**  
 **RANGO DE CRITICIDAD: RELEVANTE: 3**  
-**ACCIÓN LEGAL:**Ajuste forzoso del Presupuesto Base. (incumplimiento de los Art. 25 DLOPJ y 91.29 LOCGR).  
+**ACCIÓN LEGAL:**Ajuste forzoso del Presupuesto Base. (incumplimiento del Art. 21 Normas SUNAI y 91.29 LOCGR).  
 **ADVERTENCIA PARA LA GERENCIA:**  El incumplimiento de la Ley Orgánica de Precios Justos expone a la institución a sobreprecios y sanciones por daño patrimonial (Art. 91.29 LOCGR).  
 **FUNDAMENTO LEGAL VIOLENTADO EN CASO DE NO:**  
 **Normativa principal**  
-**Exposición de motivos:**  
-Entre otros elementos importantes, se incluye el carácter público del monto total del presupuesto base, permitiéndose al órgano o ente contratante mantener reserva sobre los detalles. Ello a los fines de reforzar los principios de publicidad y transparencia que conforme a la Constitución de la República Bolivariana de Venezuela y las leyes, deben ser respetados en las actuaciones de la Administración Pública.  
-**Artículo 6, numeral 16 de la Ley de Contrataciones Públicas:**  
-A los fines del presente Decreto con Rango, Valor y Fuerza de Ley, se define lo siguiente:  
-16\. Presupuesto Base: Es una estimación de los costos que se generan por las especificaciones técnicas requeridas para la ejecución de obras, la adquisición de bienes o la prestación de servicios.  
+**Normas de Control Interno Aplicables a Contrataciones Públicas (SUNAI):**  
+**Artículo 21: Para todos los procedimientos de contrataciones públicas, las ofertas deberán contar con estructuras de costos que permitan constatar precios justos y razonables, en caso de bienes y servicios a ser adquiridos por los órganos o entes....**  
 **Artículo 59 de la Ley de Contrataciones Públicas:**   
 Para todos los procesos de selección de contratistas establecidos en el presente Decreto con Rango, Valor y Fuerza de Ley, el contratante debe preparar el presupuesto base de la contratación, cuyo monto total incluyendo los tributos, será informado a los participantes en el pliego de condiciones o en las condiciones de contratación y podrá mantenerse en reserva su estructura de costos.  
-En la elaboración del presupuesto base los contratantes deben considerar las regulaciones existentes para los precios, en materiales o insumos establecidas en la Ley que regula la materia de precios justos y demás disposiciones relacionadas.  
+En la elaboración del presupuesto base los contratantes deben considerar las regulaciones existentes para los precios, en materiales o insumos establecidas en la Ley que regula la materia de precios justos y demás disposiciones relacionadas.
+
+**Normativa complementaria**  
 **Artículo 60 de la Ley de Contrataciones Públicas:**  
 Los contratantes definirán dentro de su estructura organizativa la Unidad encargada de la elaboración o validación del Presupuesto Base.  
 **Artículo 7 del Reglamento de la Ley de Contrataciones Públicas:**  
@@ -477,9 +477,7 @@ Este Decreto con Rango, Valor y Fuerza de Ley Orgánica, tiene por objeto establ
 La Superintendencia para la Defensa de los Derechos Socioeconómicos, podrá establecer lineamientos para la planificación y determinación de los parámetros de referencia utilizados para fijar precios. Dichos lineamientos pueden tener carácter general, sectorial, particular o ser categorizados según las condiciones vinculantes o similares entre grupos de sujetos.   
 Los lineamientos establecidos conforme a lo señalado en este artículo, serán de obligatoria observancia respecto de los bienes, servicios, sectores, actividades, sujetos de aplicación o grupo de usuarios a quienes se refieran, así como para la desagregación de los respectivos costos o componentes del precio de bienes y servicios.   
 **Artículo 32 de la Ley Orgánica de Precios Justos:**  
-La Superintendencia Nacional para la Defensa de los Derechos Socioeconómicos, cuando presuma que los sujetos de aplicación de este Decreto con Rango, Valor y Fuerza de Ley Orgánica, han incurrido en cualquiera de los ilícitos contemplados en la ley que regula el régimen cambiario, informará al ente competente, a fin de que aplique la sanción que haya lugar. 
-
-**Normativa secundaria**  
+La Superintendencia Nacional para la Defensa de los Derechos Socioeconómicos, cuando presuma que los sujetos de aplicación de este Decreto con Rango, Valor y Fuerza de Ley Orgánica, han incurrido en cualquiera de los ilícitos contemplados en la ley que regula el régimen cambiario, informará al ente competente, a fin de que aplique la sanción que haya lugar.   
 **Artículo 17 de la Ley Contra la Corrupción:**   
 Las funcionarias, funcionarios, empleadas públicas y empleados públicos instruirán los procedimientos y demás trámites administrativos procurando su simplificación y respetando los principios de economía, celeridad, eficacia, objetividad, imparcialidad, honestidad, transparencia, buena fe y confianza, establecidos en el Decreto con Rango, Valor y Fuerza de Ley Orgánica de la Administración Pública y en la Ley Orgánica de Procedimientos Administrativos.   
 **Artículo 18 de la Ley Contra la Corrupción:**   
@@ -579,23 +577,14 @@ c. Preparar la elaboración del presupuesto base, que contenga las regulaciones 
 **CAAUAP.14** ¿Cumplió la modalidad de contratación seleccionada con las disposiciones del Artículos 77.1 de la Ley de Contrataciones Públicas para la adquisición de bienes por un monto mayor a 20.000 UCAU?  
 **Respuesta: SI; NO; N/A**  
 **RANGO DE CRITICIDAD: CRÍTICO: 5**  
-**ACCIÓN LEGAL:** Nulidad absoluta por fraude a la ley al evadir la modalidad de concurso abierto obligatorio.( incumplimiento de los Art. 19 LOPA y 91.1 LOCGR).  
+**ACCIÓN LEGAL:** Nulidad absoluta por fraude a la ley al evadir la modalidad de concurso abierto obligatorio.(incumplimiento del Art. 77.1 LCP y Art. 6 Ley Const. Guerra Económica).   
 **ADVERTENCIA PARA LA GERENCIA:** El uso de una modalidad menos rigurosa para eludir el Concurso Abierto es causal de responsabilidad administrativa (Art. 91.1 LOCGR).  
 **FUNDAMENTO LEGAL VIOLENTADO EN CASO DE NO:**  
 **Normativa principal**  
 **Artículo 77, numeral 1 de la Ley de Contrataciones Públicas:**  
-Debe procederse por Concurso Abierto o Concurso Abierto Anunciado Internacionalmente:
-
-1. En el caso de adquisición de bienes, si la adjudicación a ser otorgada es por un monto estimado superior a veinte mil unidades tributarias (20.000 U.T.).
-
-**Artículo 19 de la Ley Orgánica de Procedimientos Administrativos:**  
-Los actos de la administración serán absolutamente nulos en los siguientes casos:
-
-1. Cuando así esté expresamente determinado por una norma constitucional o legal;  
-2. Cuando resuelvan un caso precedentemente decidido con carácter definitivo y que haya creado derechos particulares, salvo autorización expresa de la Ley.  
-3. Cuando su contenido sea de imposible o ilegal ejecución, y;   
-4. Cuando hubieren sido dictados por autoridades manifiestamente incompetentes, o con prescindencia total y absoluta del procedimiento legalmente establecido. 
-
+Debe procederse por Concurso Abierto o Concurso Abierto Anunciado Internacionalmente: 1\. En el caso de adquisición de bienes, si la adjudicación a ser otorgada es por un monto estimado superior a veinte mil unidades tributarias (20.000 U.T.).  
+**Ley Constitucional contra la Guerra Económica para la Racionalidad y Uniformidad en la Adquisición de Bienes, Servicios y Obras Públicas:**     
+**Artículo 6: Se establece una unidad de determinación objetiva y simple aplicación aritmética, la cual se denominará Unidad para el Cálculo Aritmético del Umbral Máximo y Mínimo (UCAU), que será utilizada como multiplicador único a los fines de obtener el monto en moneda que corresponde a los umbrales máximos y mínimos....**   
 **Normativa complementaria**  
 **Artículo 17 de la Ley Contra la Corrupción:**   
 Las funcionarias, funcionarios, empleadas públicas y empleados públicos instruirán los procedimientos y demás trámites administrativos procurando su simplificación y respetando los principios de economía, celeridad, eficacia, objetividad, imparcialidad, honestidad, transparencia, buena fe y confianza, establecidos en el Decreto con Rango, Valor y Fuerza de Ley Orgánica de la Administración Pública y en la Ley Orgánica de Procedimientos Administrativos.   
