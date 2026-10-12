@@ -3,6 +3,7 @@
 
 **CAAUC.** 1 ¿El contrato definió de manera clara y detallada el objeto de la contratación, incluyendo especificaciones técnicas, alcance, unidades de medida y cualquier otro detalle relevante que permita identificar sin ambigüedad los servicios, obras o productos a ser proporcionados?  
 **Respuesta: SI; NO; N/A**  
+**APLICA_A:** TODOS  
 **RANGO DE CRITICIDAD: CRÍTICO 5\.**  
 **Acción Legal: Nulidad absoluta del contrato por objeto indeterminado o falta de determinación del compromiso financiero. Suspensión de ejecución (incumplimiento Art. 6.32 LCP y 19.3 LOPA).**  
 **Advertencia a la Gerencia:Firmar un contrato con un objeto genérico o impreciso es considerado un contrato viciado de nulidad. Esto impide al Estado exigir garantías en tribunales y facilita el fraude y los sobreprecios ocultos por entregas distintas a las necesitadas.**  
@@ -29,6 +30,7 @@
 
 **CAAUC.** 2 ¿El contrato estableció explícitamente el monto total de la contratación con su correspondiente desglose en moneda nacional o extranjera según correspondiera?  
 **Respuesta: SI; NO; N/A**  
+**APLICA_A:** TODOS  
 **RANGO DE CRITICIDAD: CRÍTICO 5\.**  
 **Acción Legal: Nulidad absoluta del contrato por objeto indeterminado o falta de determinación del compromiso financiero. Suspensión de ejecución (incumplimiento Art. 6.32 LCP y 19.3 LOPA).**  
 **Advertencia a la Gerencia: Un contrato sin monto total explícito y desglosado impide el control presupuestario y facilita sobreprecios ocultos, viciando la legalidad del pago.**  
@@ -55,6 +57,7 @@
 
 **CAAUC.** 3 ¿Se incluyó en el contrato un detalle pormenorizado de los precios unitarios, cantidades y subtotales correspondientes a cada bien, servicio u obra contratada?  
 **Respuesta: SI; NO; N/A**  
+**APLICA_A:** TODOS  
 **RANGO DE CRITICIDAD: CRÍTICO 5\.**  
 **Acción Legal: Impugnación de pagos y nulidad de cláusula financiera.(incumplimiento Art. 6.32 LCP y 19.3 LOPA).**  
 **Advertencia a la Gerencia: Omitir precios unitarios imposibilita la auditoría de valuaciones o facturas parciales y elimina la base legal para calcular variaciones de precios o modificaciones.**  
@@ -81,6 +84,7 @@
 
 **CAAUC.** 4 ¿El contrato precisó de forma inequívoca el plazo total de ejecución, especificando las fechas exactas de inicio y conclusión de las obligaciones contractuales?  
 **Respuesta: SI; NO; N/A**  
+**APLICA_A:** TODOS  
 **RANGO DE CRITICIDAD: CRÍTICO 5\.**  
 **Acción Legal: Nulidad parcial del contrato por ausencia de término e imposibilidad de aplicar penalidades. (incumplimiento Art. 6.32 LCP y 118.1.6 LCP).**  
 **Advertencia a la Gerencia: Sin fechas de inicio y fin, el contrato es perpetuo en la práctica. Es jurídicamente imposible aplicar multas por mora sin un plazo exacto definido.**  
@@ -109,6 +113,7 @@
 
 **CAAUC.** 5 ¿Se identificó y designó formalmente en el contrato a la Unidad Usuaria encargada de administrar el cumplimiento contractual, evaluar al contratista y verificar el logro de los objetivos pactados, conforme a la normativa vigente?  
 **Respuesta: SI; NO; N/A**  
+**APLICA_A:** TODOS  
 **RANGO DE CRITICIDAD: RELEVANTE 3\.**  
 **Acción Legal:Instrucción de designación administrativa de custodio del contrato. (incumplimiento Art. 8 RLCP).**  
 **Advertencia a la Gerencia: Un contrato "huérfano" (sin Unidad Usuaria doliente) es el principal foco de corrupción, pues nadie evalúa el desempeño ni recibe formalmente los bienes/servicios.**  
@@ -133,6 +138,7 @@
 
 **CAAUC.** 6¿El contrato indicó expresamente la existencia de disponibilidad presupuestaria previa a su formalización, conforme a lo establecido en el artículo 74 de la LCP?  
 **Respuesta: SI; NO; N/A**  
+**APLICA_A:** TODOS  
 **RANGO DE CRITICIDAD: CRÍTICO 5\.**  
 **Acción Legal: Nulidad de la cláusula financiera e inicio de averiguación administrativa por forjamiento de compromiso.(incumplimiento Art. 74LCP).**  
 **Advertencia a la Gerencia: Firmar un contrato sin certificación de fondos es un delito de salvaguarda. Genera deudas públicas ilegítimas y responsabilidad personal sobre el ordenador del gasto.**  
@@ -157,6 +163,7 @@
 
 **CAAUC.** 7 ¿La contratación fue adjudicada bajo la modalidad plurianual conforme a los requisitos establecidos en la normativa aplicable?  
 **Respuesta: SI; NO; N/A**  
+**APLICA_A:** TODOS  
 **RANGO DE CRITICIDAD: RELEVANTE 3\.**  
 **Acción Legal: Revisión de planificación presupuestaria anualizada.(incumplimiento Art. 75 LCP; 10 NORMAS SUNAI).**  
 **Advertencia a la Gerencia: Omitir la planificación por fases en obras/servicios largos causa paralizaciones, deudas a proveedores e inejecución de obras por deflación presupuestaria.**  
@@ -183,6 +190,7 @@
 
 **CAAUC.** 8 ¿Se formalizó el contrato inicial por el monto presupuestario disponible correspondiente al primer ejercicio fiscal involucrado?  
 **Respuesta: SI; NO; N/A**  
+**APLICA_A:** TODOS  
 **RANGO DE CRITICIDAD: RELEVANTE 3\.**  
 **Acción Legal: Nulidad del compromiso por el excedente no respaldado presupuestariamente.(incumplimiento Art. 75 LCP).**  
 **Advertencia a la Gerencia: Firmar el contrato por el monto total de la obra cuando sólo se tiene presupuesto para un año es ilegal. Obliga al Estado a una deuda no certificada.**  
@@ -207,6 +215,7 @@
 
 **CAAUC.** 9 ¿Se suscribieron los contratos o adendas específicos para cada ejercicio fiscal posterior conforme a la programación presupuestaria?  
 **Respuesta: SI; NO; N/A**  
+**APLICA_A:** TODOS  
 **RANGO DE CRITICIDAD: RELEVANTE 3\.**  
 **Acción Legal: Paralización de la ejecución por falta de respaldo contractual para el año en curso.(incumplimiento Art. 75 LCP; 10 NORMAS SUNAI).**  
 **Advertencia a la Gerencia: Ejecutar obra en el año 2 apoyándose solo en el contrato del año 1 es ilegal. No habrá base para pagar valuaciones del nuevo año.**  
@@ -233,6 +242,7 @@
 
 **CAAUC.** 10 ¿El instrumento contractual incluyó una cláusula que estableciera expresamente que la ausencia de suscripción de contratos para ejercicios futuros no genera responsabilidad alguna para la entidad contratante en caso de insuficiencia presupuestaria?  
 **Respuesta: SI; NO; N/A**  
+**APLICA_A:** TODOS  
 **RANGO DE CRITICIDAD: RELEVANTE 3\.**  
 **Acción Legal: Instrucción de inclusión de cláusula eximente de responsabilidad.(incumplimiento Art. 74 y 75 LCP; 10 NORMAS SUNAI).**  
 **Advertencia a la Gerencia:Si el Estado no aprueba presupuesto el año siguiente y esta cláusula no existe, el contratista podrá demandar al ente por lucro cesante o incumplimiento.**  
@@ -260,6 +270,7 @@
 
 **CAAUC.** 11 ¿Se aplicaron los mecanismos de actualización económica previstos en la normativa para los contratos plurianuales ante variaciones significativas en los indicadores macroeconómicos?  
 **Respuesta: SI; NO; N/A**  
+**APLICA_A:** TODOS  
 **RANGO DE CRITICIDAD: RELEVANTE 3\.**  
 **Acción Legal: Revisión de addendums por desequilibrio económico.(incumplimiento Art. 133 LCP).**  
 **Advertencia a la Gerencia: Reconocer actualizaciones fuera de los mecanismos legales (fórmulas escalatorias) genera presunción de daño al patrimonio.**  
@@ -284,6 +295,7 @@
 
 **CAAUC.** 12 ¿El proceso de formalización contractual cumplió íntegramente con los requisitos documentales establecidos en la Ley de Contrataciones Públicas (LCP)?  
 **Respuesta: SI; NO; N/A**  
+**APLICA_A:** TODOS  
 **RANGO DE CRITICIDAD: RELEVANTE 3\.**  
 **Acción Legal: Paralización del expediente hasta subsanación documental.(incumplimiento Art. 116 LCP).**  
 **Advertencia a la Gerencia: Formalizar un contrato sin tener en expediente los documentos legales de la empresa, el pliego, la oferta o las solvencias es una violación directa a la LCP.**  
@@ -308,6 +320,7 @@
 
 **CAAUC.** 13 ¿Se observó el plazo de 8 días hábiles estipulados en la LCP para la firma del contrato, contados a partir de la notificación de la adjudicación?  
 **Respuesta: SI; NO; N/A**  
+**APLICA_A:** TODOS  
 **RANGO DE CRITICIDAD: RELEVANTE 3\.**  
 **Acción Legal: Decaimiento de la adjudicación si es culpa del contratista, o responsabilidad administrativa si es mora del Ente. (incumplimiento Art. 117 LCP).**  
 **Advertencia a la Gerencia: Exceder los lapsos de firma genera pérdida de vigencia de la oferta e impide ejecutar la garantía de mantenimiento de oferta si el contratista se retracta.**  
@@ -332,6 +345,7 @@
 
 **CAAUC.** 14 ¿El contrato estableció dispositivos específicos de seguimiento y control para garantizar el cumplimiento de las obligaciones pactadas?  
 **Respuesta: SI; NO; N/A**  
+**APLICA_A:** TODOS  
 **RANGO DE CRITICIDAD: RELEVANTE 3\.**  
 **Acción Legal: Emisión obligatoria de Acta de Inicio (incumplimiento Art. 118.1 y 127 LCP).**  
 **Advertencia a la Gerencia: Sin una cláusula clara de "fecha de inicio" (sea a la firma, pago de anticipo o firma del acta), es legalmente imposible computar días de mora si el contratista se retrasa. El Ente pierde derecho a multar.**  
@@ -357,6 +371,7 @@
 
 **CAAUC.** 15 ¿El contrato determinó de manera expresa e inequívoca la fecha de inicio tanto para la ejecución de obras?  
 **Respuesta: SI; NO; N/A**  
+**APLICA_A:** OBRAS  
 **RANGO DE CRITICIDAD: RELEVANTE 3\.**  
 **Acción Legal: Emisión obligatoria de Acta de Inicio (incumplimiento Art. 118.1 y 127 LCP).**  
 **Advertencia a la Gerencia: Sin una cláusula clara de "fecha de inicio" (sea a la firma, pago de anticipo o firma del acta), es legalmente imposible computar días de mora si el contratista se retrasa. El Ente pierde derecho a multar.**  
@@ -382,6 +397,7 @@
 
 **CAAUC.** 16 ¿El contrato determinó de manera expresa e inequívoca la fecha de inicio para la entrega de bienes?  
 **Respuesta: SI; NO; N/A**  
+**APLICA_A:** BIENES  
 **RANGO DE CRITICIDAD: RELEVANTE 3\.**  
 **Acción Legal: Emisión obligatoria de Acta de Inicio (incumplimiento Art. 118.1 y 127 LCP).**  
 **Advertencia a la Gerencia: Sin una cláusula clara de "fecha de inicio" (sea a la firma, pago de anticipo o firma del acta), es legalmente imposible computar días de mora si el contratista se retrasa. El Ente pierde derecho a multar.**  
@@ -407,6 +423,7 @@
 
 **CAAUC.** 17 ¿El contrato determinó de manera expresa e inequívoca la fecha de inicio para la prestación de servicios?  
 **Respuesta: SI; NO; N/A**  
+**APLICA_A:** SERVICIOS  
 **RANGO DE CRITICIDAD: RELEVANTE 3\.**  
 **Acción Legal: Emisión obligatoria de Acta de Inicio (incumplimiento Art. 118.1 y 127 LCP).**  
 **Advertencia a la Gerencia: Sin una cláusula clara de "fecha de inicio" (sea a la firma, pago de anticipo o firma del acta), es legalmente imposible computar días de mora si el contratista se retrasa. El Ente pierde derecho a multar.**  
@@ -432,6 +449,7 @@
 
 **CAAUC.** 18 ¿El contrato contempló el otorgamiento del anticipo, de ser aplicable?  
 **Respuesta: SI; NO; N/A**  
+**APLICA_A:** TODOS  
 **RANGO DE CRITICIDAD: RELEVANTE 3\.**  
 **Acción Legal: Verificación de la constitución de la garantía de anticipo.(incumplimiento Arts. 122 LCP y 19 Normas SUNAI).**  
 **Advertencia a la Gerencia: Pagar anticipos sin fianza o no exigir fiel cumplimiento es pérdida directa del patrimonio público.**   
@@ -455,6 +473,7 @@
 
 **CAAUC.** 19 ¿Se especificó en el contrato el procedimiento de verificación del cumplimiento de las cláusulas de responsabilidad social establecidas en la normativa aplicable?  
 **Respuesta: SI; NO; N/A**  
+**APLICA_A:** TODOS  
 **RANGO DE CRITICIDAD: ORDINARIA 1\.**  
 **Acción Legal: Exigencia de certificación del Compromiso de Responsabilidad Social previo al cierre.(incumplimiento Art. 118.3 LCP).**  
 **Advertencia a la Gerencia: No verificar el aporte social (3% al 5%) es considerado daño patrimonial directo a la Nación o la comunidad beneficiaria.**  
@@ -478,6 +497,7 @@
 **Artículo 5: Corresponde a la máxima autoridad de cada órgano o ente de la Administración Pública, la responsabilidad de establecer y mantener un sistema de control interno adecuado.**
 
 **CAAUC.** 20 ¿El contrato estableció un régimen de supervisiones técnicas periódicas para verificar el avance físico-financiero de obras?  
+**APLICA_A:** OBRAS  
 **RANGO DE CRITICIDAD: RELEVANTE 3\.**  
 **Acción Legal: Paralización de pagos sin informes técnicos previos.(incumplimiento Art. 118.4 LCP).**  
 **Advertencia a la Gerencia: Pagar a ciegas sin informes de supervisión técnica adjuntos a la factura es el principal hallazgo en reparos de la Contraloría por "Pagos Indebidos".**  
@@ -502,6 +522,7 @@
 
 **CAAUC.** 21 ¿El contrato estableció un régimen de supervisiones técnicas periódicas para verificar la calidad de bienes?  
 **Respuesta: SI; NO; N/A**  
+**APLICA_A:** BIENES  
 **RANGO DE CRITICIDAD: RELEVANTE 3\.**  
 **Acción Legal: Paralización de pagos sin informes técnicos previos.(incumplimiento Art. 118.4 LCP).**  
 **Advertencia a la Gerencia: Pagar a ciegas sin informes de supervisión técnica adjuntos a la factura es el principal hallazgo en reparos de la Contraloría por "Pagos Indebidos".**  
@@ -526,6 +547,7 @@
 
 **CAAUC.** 22 ¿El contrato estableció un régimen de supervisiones técnicas periódicas para verificar la calidad de los servicios prestados?  
 **Respuesta: SI; NO; N/A**  
+**APLICA_A:** SERVICIOS  
 **RANGO DE CRITICIDAD: RELEVANTE 3\.**  
 **Acción Legal: Paralización de pagos sin informes técnicos previos.(incumplimiento Art. 118.4 LCP).**  
 **Advertencia a la Gerencia: Pagar a ciegas sin informes de supervisión técnica adjuntos a la factura es el principal hallazgo en reparos de la Contraloría por "Pagos Indebidos".**  
@@ -550,6 +572,7 @@
 
 **CAAUC.** 23 ¿El contrato estableció un procedimiento claro para la solicitud y aprobación de modificaciones contractuales, indicando que deben ser formalizadas por escrito por la autoridad competente, según el Art.32 de las Normas SUNAI?  
 **Respuesta: SI; NO; N/A**  
+**APLICA_A:** TODOS  
 **RANGO DE CRITICIDAD: RELEVANTE 3\.**  
 **Acción Legal: Nulidad de acuerdos verbales de obra extra.(incumplimiento Art. 130 LCP, 32 SUNAI).**  
 **Advertencia a la Gerencia: Las modificaciones verbales no existen para la Ley de Contrataciones. Si el contratista ejecuta obras extra sin el respectivo addendum escrito y autorizado, el Estado NO DEBE pagarlas.**  
@@ -576,6 +599,7 @@
 
 **CAAUC.** 24 ¿El contrato estableció las causales legales para su modificación?  
 **Respuesta: SI; NO; N/A**  
+**APLICA_A:** TODOS  
 **RANGO DE CRITICIDAD: RELEVANTE 3\.**  
 **Acción Legal: Nulidad de acuerdos verbales de obra extra.(incumplimiento Art. 130 LCP, 32 SUNAI).**  
 **Advertencia a la Gerencia: Las modificaciones verbales no existen para la Ley de Contrataciones. Si el contratista ejecuta obras extra sin el respectivo addendum escrito y autorizado, el Estado NO DEBE pagarlas.**  
@@ -602,6 +626,7 @@
 
 **CAAUC.** 25 ¿El contrato estableció cláusulas específicas para prórrogas justificadas, suspensiones regulatorias o paralizaciones autorizadas del plazo de ejecución?  
 **Respuesta: SI; NO; N/A**  
+**APLICA_A:** TODOS  
 **RANGO DE CRITICIDAD: RELEVANTE 3\.**  
 **Acción Legal:Suspensión de la ejecución del contrato en caso de fuerza mayor sin acta. (incumplimiento Art. 130 LCP, 32 SUNAI).**  
 **Advertencia a la Gerencia: Las modificaciones verbales no generan obligación de pago. Reconocer aumentos sin fórmula en el contrato genera reparos por daño patrimonial.**  
@@ -628,6 +653,7 @@
 
 **CAAUC.** 26 ¿El contrato determinó de manera expresa la fecha de terminación de la obra?  
 **Respuesta: SI; NO; N/A**  
+**APLICA_A:** OBRAS  
 **RANGO DE CRITICIDAD: RELEVANTE 3\.**  
 **Acción Legal: Imposibilidad de ejecutar garantías y multas por mora (incumplimiento del Art. 118.6 LCP).**  
 **Advertencia a la Gerencia: La omisión de la fecha exacta de terminación imposibilita determinar matemáticamente el inicio de la mora (retraso), lo que impide al Ente aplicar multas o ejecutar la cláusula penal. Además, sin una fecha de fin preestablecida, se corre el grave riesgo de que las fianzas de fiel cumplimiento y anticipo caduquen antes de la recepción definitiva de la obra, dejando al patrimonio público en estado de indefensión total..**  
@@ -652,6 +678,7 @@
 
 **CAAUC.** 27 ¿El contrato determinó de manera expresa la fecha de entrega de bienes?  
 **Respuesta: SI; NO; N/A**  
+**APLICA_A:** BIENES  
 **RANGO DE CRITICIDAD: RELEVANTE 3\.**  
 **Acción Legal: Imposibilidad de ejecutar garantías y multas por mora (incumplimiento del Art. 118.6 LCP).**  
 **Advertencia a la Gerencia: La omisión de la fecha exacta de terminación imposibilita determinar matemáticamente el inicio de la mora (retraso), lo que impide al Ente aplicar multas o ejecutar la cláusula penal. Además, sin una fecha de fin preestablecida, se corre el grave riesgo de que las fianzas de fiel cumplimiento y anticipo caduquen antes de la recepción definitiva de la obra, dejando al patrimonio público en estado de indefensión total..**  
@@ -676,6 +703,7 @@
 
 **CAAUC.** 28 ¿El contrato determinó de manera expresa la fecha de finalización del servicio?  
 **Respuesta: SI; NO; N/A**  
+**APLICA_A:** SERVICIOS  
 **RANGO DE CRITICIDAD: RELEVANTE 3\.**  
 **Acción Legal: Imposibilidad de ejecutar garantías y multas por mora (incumplimiento del Art. 118.6 LCP).**  
 **Advertencia a la Gerencia: La omisión de la fecha exacta de terminación imposibilita determinar matemáticamente el inicio de la mora (retraso), lo que impide al Ente aplicar multas o ejecutar la cláusula penal. Además, sin una fecha de fin preestablecida, se corre el grave riesgo de que las fianzas de fiel cumplimiento y anticipo caduquen antes de la recepción definitiva de la obra, dejando al patrimonio público en estado de indefensión total..**  
@@ -700,6 +728,7 @@
 
 **CAAUC.** 29 ¿El contrato incluyó una cláusula que define el procedimiento para la elaboración del Finiquito Contable, conforme a lo establecido en el Art.38 de las Normas SUNAI?  
 **Respuesta: SI; NO; N/A**  
+**APLICA_A:** TODOS  
 **RANGO DE CRITICIDAD: RELEVANTE 3\.**  
 **Acción Legal: Instrucción de elaboración obligatoria de expediente de cierre. (incumplimiento Art. 38,39,40  NORMAS SUNA; 118.7.9 LCP).**  
 **Advertencia a la Gerencia: Sin finiquito y cierre, las fianzas permanecen "vivas" afectando la capacidad financiera del contratista ilegalmente. Sin evaluación de desempeño (RNC), el Estado permite que empresas deficientes sigan siendo contratadas.**  
@@ -728,6 +757,7 @@
 
 **CAAUC.** 30 ¿El contrato estipuló detalladamente el procedimiento de desembolsos, incluyendo plazos máximos, documentación sustentatoria y requisitos formales para cada acto de pago?  
 **Respuesta: SI; NO; N/A**  
+**APLICA_A:** TODOS  
 **RANGO DE CRITICIDAD: CRÍTICO 5\.**  
 **Acción Legal:** Impugnación de pagos emitidos sin verificación técnica. (incumplimiento Art. 141 LCP y Art. 177 RLCP).  
 **Advertencia a la Gerencia:**Omitir los criterios de aceptación en el contrato obliga al Ente a pagar cualquier cosa que entregue el proveedor. La revisión y conformación por el supervisor son indelegables.  
@@ -754,6 +784,7 @@
 
 **CAAUC.** 31 ¿El contrato definió los criterios de aceptación para el suministro de bienes que deben cumplirse como condición para el pago?  
 **Respuesta: SI; NO; N/A**  
+**APLICA_A:** BIENES  
 **RANGO DE CRITICIDAD: CRÍTICO 5\.**  
 **Acción Legal:** Impugnación de pagos emitidos sin verificación técnica. (incumplimiento Art. 141 LCP y Art. 177 RLCP).  
 **Advertencia a la Gerencia:**Omitir los criterios de aceptación en el contrato obliga al Ente a pagar cualquier cosa que entregue el proveedor. La revisión y conformación por el supervisor son indelegables.  
@@ -780,6 +811,7 @@
 
 **CAAUC.** 32 ¿El contrato definió los criterios de aceptación del servicio que deben cumplirse como condición para el pago?  
 **Respuesta: SI; NO; N/A**  
+**APLICA_A:** SERVICIOS  
 **RANGO DE CRITICIDAD: CRÍTICO 5\.**  
 **Acción Legal:** Impugnación de pagos emitidos sin verificación técnica. (incumplimiento Art. 141 LCP y Art. 177 RLCP).  
 **Advertencia a la Gerencia:**Omitir los criterios de aceptación en el contrato obliga al Ente a pagar cualquier cosa que entregue el proveedor. La revisión y conformación por el supervisor son indelegables.  
@@ -806,6 +838,7 @@
 
 **CAAUC.** 33 ¿El contrato definió los criterios de aceptación de la obra, que deben cumplirse como condición para el pago?  
 **Respuesta: SI; NO; N/A**  
+**APLICA_A:** OBRAS  
 **RANGO DE CRITICIDAD: CRÍTICO 5\.**  
 **Acción Legal:** Impugnación de pagos emitidos sin verificación técnica. (incumplimiento Art. 141 LCP y Art. 177 RLCP).  
 **Advertencia a la Gerencia:**Omitir los criterios de aceptación en el contrato obliga al Ente a pagar cualquier cosa que entregue el proveedor. La revisión y conformación por el supervisor son indelegables.  
@@ -832,6 +865,7 @@
 
 **CAAUC.** 34 ¿El contrato estableció los procedimientos de verificación (inspecciones, pruebas, certificaciones, etc.) como condición previa para la autorización de pagos?  
 **Respuesta: SI; NO; N/A**  
+**APLICA_A:** TODOS  
 **RANGO DE CRITICIDAD: CRÍTICO 5\.**  
 **Acción Legal:** Impugnación de pagos emitidos sin verificación técnica. (incumplimiento Art. 141 LCP y Art. 177 RLCP).  
 **Advertencia a la Gerencia:**Omitir los criterios de aceptación en el contrato obliga al Ente a pagar cualquier cosa que entregue el proveedor. La revisión y conformación por el supervisor son indelegables.  
@@ -858,6 +892,7 @@
 
 **CAAUC.** 35 ¿El contrato estableció el procedimiento detallado para el cierre administrativo?  
 **Respuesta: SI; NO; N/A**  
+**APLICA_A:** TODOS  
 **RANGO DE CRITICIDAD: ORDINARIA 1\.**  
 **Acción Legal: Instrucción de elaboración obligatoria de expediente de cierre. (incumplimiento Art. 38,39,40  NORMAS SUNA; 118.7.9 LCP).**  
 **Advertencia a la Gerencia: Sin finiquito y cierre, las fianzas permanecen "vivas" afectando la capacidad financiera del contratista ilegalmente. Sin evaluación de desempeño (RNC), el Estado permite que empresas deficientes sigan siendo contratadas.**  
@@ -886,6 +921,7 @@
 
 **CAAUC.** 36 ¿El contrato contiene una cláusula sobre la Evaluación de Desempeño del contratista al finalizar la ejecución, y establece la obligación de notificarle los resultados, como lo exige el Art.40 de las Normas SUNAI?  
 **Respuesta: SI; NO; N/A**  
+**APLICA_A:** TODOS  
 **RANGO DE CRITICIDAD: ORDINARIA 1\.**  
 **Acción Legal: Instrucción de elaboración obligatoria de expediente de cierre. (incumplimiento Art. 38,39,40  NORMAS SUNA; 118.7.9 LCP).**  
 **Advertencia a la Gerencia: Sin finiquito y cierre, las fianzas permanecen "vivas" afectando la capacidad financiera del contratista ilegalmente. Sin evaluación de desempeño (RNC), el Estado permite que empresas deficientes sigan siendo contratadas.**  
@@ -912,6 +948,7 @@
 
 **CAAUC.** 37 ¿El contrato mantuvo inalteradas las condiciones especificadas tanto en el pliego de condiciones como en la oferta beneficiaria de la adjudicación según a lo establecido en el artículo 119 de la LCP?  
 **Respuesta: SI; NO; N/A**  
+**APLICA_A:** TODOS  
 **RANGO DE CRITICIDAD: CRÍTICO 5\.**  
 **Acción Legal:** Nulidad absoluta de la adjudicación por alteración de las condiciones ofertadas. incumplimiento 119 LCP).  
 **Advertencia a la Gerencia:** Cambiar las condiciones del pliego o de la oferta a favor del contratista en el texto del contrato es considerado fraude a la ley y vicia de nulidad todo el proceso.  
@@ -936,6 +973,7 @@
 
 **CAAUC.** 38 ¿Se prohibió expresamente en el contrato cualquier forma de cesión total o parcial sin autorización escrita previa de la entidad contratante?  
 **Respuesta: SI; NO; N/A**  
+**APLICA_A:** TODOS  
 **RANGO DE CRITICIDAD: RELEVANTE 3\.**  
 **Acción Legal:** Advertencia de riesgo de subcontratación ilegal. (incumplimiento Art. 120 LCP).  
 **Advertencia a la Gerencia:** No prohibir la cesión permite que terceros no evaluados por el Estado ejecuten el contrato, burlando el Registro Nacional de Contratistas (RNC) y la evaluación legal/técnica.  
@@ -960,6 +998,7 @@
 
 **CAAUC.** 39 ¿El contrato estableció garantía de anticipo?  
 **Respuesta: SI; NO; N/A**  
+**APLICA_A:** TODOS  
 **RANGO DE CRITICIDAD: CRÍTICO 5\.**  
 **Acción Legal: Paralización de desembolso del anticipo.(incumplimiento Arts. 122 LCP y 19 Normas SUNAI).**  
 **Advertencia a la Gerencia: Pagar un anticipo sin que conste en el contrato la obligación de afianzarlo por el 100% de su monto equivale a entregar dinero a riesgo total del Estado. Es un supuesto de responsabilidad administrativa directo.**  
@@ -983,6 +1022,7 @@
 
 **CAAUC.** 40 ¿En el instrumento contractual se indicó el porcentaje (%) y el monto (Bs.) de la Fianza de Anticipo?  
 **Respuesta: SI; NO; N/A**  
+**APLICA_A:** TODOS  
 **Acción Legal: Paralización de desembolso del anticipo.(incumplimiento Arts. 122 LCP y 19 Normas SUNAI).**  
 **Advertencia a la Gerencia: Pagar un anticipo sin que conste en el contrato la obligación de afianzarlo por el 100% de su monto equivale a entregar dinero a riesgo total del Estado. Es un supuesto de responsabilidad administrativa directo.**  
 	**FUNDAMENTO LEGAL VIOLENTADO EN CASO DE NO:**  
@@ -1005,6 +1045,7 @@
 
 **CAAUC.** 41 ¿El contrato estableció la garantía de fiel cumplimiento especificando sus condiciones?  
 **Respuesta: SI; NO; N/A**  
+**APLICA_A:** TODOS  
 **RANGO DE CRITICIDAD: CRÍTICO 5\.**  
 **Acción Legal: Aplicación obligatoria de la retención del 10% sobre cada valuación/factura.(incumplimiento Arts. 123 LCP y 19 Normas SUNAI).**  
 **Advertencia a la Gerencia: Si el contratista no entregó póliza de fiel cumplimiento y el contrato no establece la retención del 10%, el Ente no tendrá cómo cobrarse ante un abandono de obra o servicio deficiente.**  
@@ -1027,6 +1068,7 @@
 
 **CAAUC.** 42 ¿El contrato previó el mecanismo de retención del 10% de los pagos ante la falta de constitución de la garantía de fiel cumplimiento?  
 **Respuesta: SI; NO; N/A**  
+**APLICA_A:** TODOS  
 **RANGO DE CRITICIDAD: CRÍTICO 5\.**  
 **Acción Legal: Aplicación obligatoria de la retención del 10% sobre cada valuación/factura.(incumplimiento Arts. 123 LCP y 19 Normas SUNAI).**  
 **Advertencia a la Gerencia: Si el contratista no entregó póliza de fiel cumplimiento y el contrato no establece la retención del 10%, el Ente no tendrá cómo cobrarse ante un abandono de obra o servicio deficiente.**  
@@ -1049,6 +1091,7 @@
 
 **CAAUC.** 43 ¿El contrato estableció la obligación de constituir una fianza laboral equivalente al 10% del costo total del personal incluído en la estructura de costos de la oferta que presentó?  
 **Respuesta: SI; NO; N/A**  
+**APLICA_A:** SERVICIOS; OBRAS  
 **RANGO DE CRITICIDAD: CRÍTICO 5\.**  
 **Acción Legal: Aplicación obligatoria de la retención del 5% sobre cada pago.(incumplimiento Arts. 124 LCP y 19 Normas SUNAI).**  
 **Advertencia a la Gerencia: Sin Fianza Laboral o retención del 5%, la entidad pública se vuelve "Responsable Solidaria" ante el Ministerio del Trabajo si el contratista no le paga a sus obreros, asumiendo una deuda con dinero público.**  
@@ -1072,6 +1115,7 @@
 
 **CAAUC.** 44 ¿El contrato previó el mecanismo de retención del 5% de los pagos ante la falta de constitución de la garantía laboral?  
 **Respuesta: SI; NO; N/A**  
+**APLICA_A:** SERVICIOS; OBRAS  
 **RANGO DE CRITICIDAD: CRÍTICO 5\.**  
 **Acción Legal: Aplicación obligatoria de la retención del 5% sobre cada pago.(incumplimiento Arts. 124 LCP y 19 Normas SUNAI).**  
 **Advertencia a la Gerencia: Sin Fianza Laboral o retención del 5%, la entidad pública se vuelve "Responsable Solidaria" ante el Ministerio del Trabajo si el contratista no le paga a sus obreros, asumiendo una deuda con dinero público.**  
@@ -1095,6 +1139,7 @@
 
 **CAAUC.** 45 ¿El contrato estableció la inclusión de una póliza de responsabilidad civil?  
 **Respuesta: SI; NO; N/A**  
+**APLICA_A:** TODOS  
 **RANGO DE CRITICIDAD: CRÍTICO 5\.**  
 **Acción Legal: Exigencia inmediata de presentación de póliza previo a inicio de ejecución.(incumplimiento Arts. 125 LCP y 19 Normas SUNAI).**  
 **Advertencia a la Gerencia: Omitir esta póliza deja al Estado desprotegido ante demandas por daños a terceros (ej. un accidente en obra que afecte a un transeúnte o daño a infraestructura vecina).**  
@@ -1118,6 +1163,7 @@
 
 **CAAUC.** 46 ¿El contrato incluyó la estipulación de otras garantías accesorias?  
 **Respuesta: SI; NO; N/A**  
+**APLICA_A:** TODOS  
 **RANGO DE CRITICIDAD: ORDINARIA 1\.**  
 **Acción Legal: Revisión de necesidad según naturaleza del contrato.(incumplimiento Arts. 126 LCP y 19 Normas SUNAI).**  
 **Advertencia a la Gerencia:Omitir garantías accesorias pertinentes (como las de buena calidad, de fábrica o contra vicios ocultos) deja la inversión del Estado desprotegida a mediano y largo plazo ante defectos, averías o fallas que no sean detectables al momento de la recepción definitiva del bien, servicio u obra.**  
@@ -1141,6 +1187,7 @@
 
 **CAAUC.** 47 ¿El instrumento contractual establece que el plazo estipulado para la presentación de facturas y valuaciones por parte del contratista y su correspondiente autorización de pago por el funcionario responsable no superará los ocho (8) días hábiles?   
 **Respuesta: SI; NO; N/A**  
+**APLICA_A:** SERVICIOS; OBRAS  
 **RANGO DE CRITICIDAD: CRÍTICO 5\.**  
 **Acción Legal:**Procedimiento de responsabilidad administrativa por causación de mora. (incumplimiento Art. 177 RLCP).  
 **Advertencia a la Gerencia:**No establecer el lapso y engavetar facturas conformadas genera "Intereses Moratorios" que el Estado debe pagar con fondos públicos (Daño Patrimonial).  
@@ -1173,6 +1220,7 @@
 
 **CAAUC.** 48 ¿El contrato especificó las causales de terminación?  
 **Respuesta: SI; NO; N/A**  
+**APLICA_A:** TODOS  
 **RANGO DE CRITICIDAD: CRÍTICO 5\.**  
 **Acción Legal: Limitación al derecho de defensa del Estado. (incumplimiento Art. 145 LCP ).**  
 **Advertencia a la Gerencia: Rescindir sin procedimiento faculta al contratista a demandar al Ente. Sin fecha de fin, las fianzas caducan. El finiquito es la única prueba legal de cierre financiero.**  
@@ -1197,6 +1245,7 @@
 
 **CAAUC.** 49 ¿El contrato describió el procedimiento a seguir para la causal de terminación por cumplimiento del contrato?  
 **Respuesta: SI; NO; N/A**  
+**APLICA_A:** TODOS  
 **RANGO DE CRITICIDAD: CRÍTICO 5\.**  
 **Acción Legal: Limitación al derecho de defensa del Estado. (incumplimiento Art. 145 LCP ).**  
 **Advertencia a la Gerencia: Rescindir sin procedimiento faculta al contratista a demandar al Ente. Sin fecha de fin, las fianzas caducan. El finiquito es la única prueba legal de cierre financiero.**  
@@ -1221,6 +1270,7 @@
 
 **CAAUC.** 50 ¿El contrato describió el procedimiento a seguir para la causal de terminación por rescisión unilateral por causa no imputable al contratista?  
 **Respuesta: SI; NO; N/A**  
+**APLICA_A:** TODOS  
 **RANGO DE CRITICIDAD: CRÍTICO 5\.**  
 **Acción Legal: Limitación al derecho de defensa del Estado. (incumplimiento Art. 145 LCP ).**  
 **Advertencia a la Gerencia: Rescindir sin procedimiento faculta al contratista a demandar al Ente. Sin fecha de fin, las fianzas caducan. El finiquito es la única prueba legal de cierre financiero.**  
@@ -1245,6 +1295,7 @@
 
 **CAAUC.** 51 ¿El contrato describió el procedimiento a seguir para la causal de terminación por resolución de mutuo acuerdo?  
 **Respuesta: SI; NO; N/A**  
+**APLICA_A:** TODOS  
 **RANGO DE CRITICIDAD: CRÍTICO 5\.**  
 **Acción Legal: Limitación al derecho de defensa del Estado. (incumplimiento Art. 145 LCP ).**  
 **Advertencia a la Gerencia: Rescindir sin procedimiento faculta al contratista a demandar al Ente. Sin fecha de fin, las fianzas caducan. El finiquito es la única prueba legal de cierre financiero.**  
@@ -1269,6 +1320,7 @@
 
 **CAAUC.** 52 ¿El contrato describió el procedimiento a seguir para la causal de terminación por rescisión por causa imputable al contratista?  
 **Respuesta: SI; NO; N/A**  
+**APLICA_A:** TODOS  
 **RANGO DE CRITICIDAD: CRÍTICO 5\.**  
 **Acción Legal: Limitación al derecho de defensa del Estado. (incumplimiento Art. 145 LCP ).**  
 **Advertencia a la Gerencia: Rescindir sin procedimiento faculta al contratista a demandar al Ente. Sin fecha de fin, las fianzas caducan. El finiquito es la única prueba legal de cierre financiero.**  
@@ -1293,6 +1345,7 @@
 
 **CAAUC.** 53 ¿El contrato estableció medidas preventivas administrativas en caso de rescisión unilateral del contrato?  
 **Respuesta: SI; NO; N/A**  
+**APLICA_A:** TODOS  
 **RANGO DE CRITICIDAD: CRÍTICO 5\.**  
 **Acción Legal: Nulidad Absoluta de la sanción o descuento aplicado en factura. (incumplimiento Art. 167,168 LCP).**  
 **Advertencia a la Gerencia: Multar a un contratista restando dinero de su factura de forma automática (sin notificarle, darle derecho a descargo y dictar un acto motivado) es un acto ilegal que los tribunales anulan rutinariamente obligando a devolver el dinero con intereses..**  
@@ -1325,6 +1378,7 @@
 
 **CAAUC.** 54 ¿El contrato estableció una tipificación expresa de las infracciones contractuales y administrativas que dan lugar a la aplicación de sanciones a los particulares, incluyendo tanto los incumplimientos sustanciales de obligaciones pactadas como las violaciones a los deberes previstos en el \[artículo 167 LCP\], con especificación de los procedimientos correctivos y multas aplicables?   
 **Respuesta: SI; NO; N/A**  
+**APLICA_A:** TODOS  
 **RANGO DE CRITICIDAD: RELEVANTE 3\.**  
 **Acción Legal: Nulidad Absoluta de la sanción o descuento aplicado en factura. (incumplimiento Art. 167,168 LCP).**  
 **Advertencia a la Gerencia: Multar a un contratista restando dinero de su factura de forma automática (sin notificarle, darle derecho a descargo y dictar un acto motivado) es un acto ilegal que los tribunales anulan rutinariamente obligando a devolver el dinero con intereses..**  
@@ -1357,6 +1411,7 @@
 
 **CAAUC.** 55 ¿Estableció el contrato las sanciones aplicables a los particulares en caso de incumplimiento o infracción de acuerdo con lo establecido en el artículo 168 de la LCP?  
 **Respuesta:SI; NO; N/A**  
+**APLICA_A:** TODOS  
 **RANGO DE CRITICIDAD: RELEVANTE 3\.**  
 **Acción Legal: Nulidad Absoluta de la sanción o descuento aplicado en factura. (incumplimiento Art. 167,168 LCP).**  
 **Advertencia a la Gerencia: Multar a un contratista restando dinero de su factura de forma automática (sin notificarle, darle derecho a descargo y dictar un acto motivado) es un acto ilegal que los tribunales anulan rutinariamente obligando a devolver el dinero con intereses..**  
@@ -1389,6 +1444,7 @@
 
 **CAAUC.** 56 ¿Describió el contrato el procedimiento para la imposición de sanciones a particulares, incluyendo las etapas de notificación, defensa y recursos, conforme con el debido proceso administrativo?  
 **Respuesta: SI; NO; N/A**  
+**APLICA_A:** TODOS  
 **RANGO DE CRITICIDAD: RELEVANTE 3\.**  
 **Acción Legal: Nulidad Absoluta de la sanción o descuento aplicado en factura. (incumplimiento Art. 167,168 LCP).**  
 **Advertencia a la Gerencia: Multar a un contratista restando dinero de su factura de forma automática (sin notificarle, darle derecho a descargo y dictar un acto motivado) es un acto ilegal que los tribunales anulan rutinariamente obligando a devolver el dinero con intereses..**  
@@ -1421,6 +1477,7 @@
 
 **CAAUC.** 57 ¿El contrato fue suscrito y firmado formalmente por la máxima autoridad del órgano o ente contratante o por el funcionario en quien éste delegó expresamente dicha atribución?   
 **Respuesta: SI; NO; N/A**  
+**APLICA_A:** TODOS  
 **RANGO DE CRITICIDAD: CRÍTICO 5\.**  
 **ACCIÓN LEGAL:** Nulidad absoluta por vicio de incompetencia subjetiva y prescindencia total del procedimiento (Art. 19.4 LOPA y Art. 62 LCP).   
 **ADVERTENCIA A LA GERENCIA:** Un contrato firmado por una autoridad sin competencia legal es jurídicamente inexistente y no genera obligación de pago válida para el Estado ni derechos para el contratista.   
@@ -1447,6 +1504,7 @@
 
 **CAAUC.** 59 ¿El contrato fue firmado por el representante legal del beneficiario de la adjudicación?  
 **Respuesta: SI; NO; N/A**  
+**APLICA_A:** TODOS  
 **RANGO DE CRITICIDAD: CRÍTICO 5\.**  
 **ACCIÓN LEGAL:** Nulidad Absoluta por falta de capacidad jurídica de la contraparte. (Art.  132 RLCP; 18.4LOPA).   
 **ADVERTENCIA A LA GERENCIA:**Un contrato firmado por alguien que no posee la representación legal (según Registro Mercantil) es inejecutable. El Ente no podrá demandar ni ejecutar fianzas..   
@@ -1473,6 +1531,7 @@
 
 **CAAUC.** 60 ¿Las órdenes de compra u órdenes de servicio emitidas como contrato incorporaron los requisitos establecidos en la normativa vigente?  
 **Respuesta: SI; NO; N/A**  
+**APLICA_A:** BIENES; SERVICIOS  
 **RANGO DE CRITICIDAD: RELEVANTE 3\.**  
 **ACCIÓN LEGAL:** Instrucción de ajuste inmediato y suspensión de ejecución (incumplimiento del Art. 132 RLCP).   
 **ADVERTENCIA A LA GERENCIA:** Utilizar órdenes de compra "vacías" (sin el desglose exigido) deja al Ente en indefensión. Ante un incumplimiento, no podrá aplicar sanciones efectivas ni fianzas por carecer de cláusulas de control.   
@@ -1497,6 +1556,7 @@
 
 **CAAUC.** 61 ¿El contrato estableció como fuero exclusivo para la resolución de controversias derivadas de su interpretación o ejecución a los Juzgados Contencioso-Administrativos del domicilio legal de la Entidad contratante?  
 **Respuesta: SI; NO; N/A**  
+**APLICA_A:** TODOS  
 **RANGO DE CRITICIDAD: ORDINARIA 1\.**  
 **ACCIÓN LEGAL:** Recomendación de ajuste jurisdiccional (incumplimiento del Art. 133 RLCP).   
 **ADVERTENCIA A LA GERENCIA:** No establecer el fuero permite que el Estado sea demandado en jurisdicciones foráneas, arbitrajes privados o tribunales no contencioso-administrativos, perjudicando su defensa.  
@@ -1521,6 +1581,7 @@
 
 **CAAUC.** 62 ¿El contrato incluyó una Cláusula Penal por retraso que establece explícitamente el umbral del 15% del monto contractual como activador obligatorio del procedimiento de rescisión?   
 **Respuesta: SI; NO; N/A**  
+**APLICA_A:** TODOS  
 **RANGO DE CRITICIDAD: RELEVANTE 3\.**  
 **ACCIÓN LEGAL:** Aplicación obligatoria de rescisión contractual por mandato normativo. (incumplimiento del Art. 33 SUNAI).   
 **ADVERTENCIA A LA GERENCIA:** Permitir que una obra acumule un retraso superior al 15% de multa y no rescindir el contrato es complicidad en el incumplimiento y daño al Estado, sancionado por la SUNAI.  
@@ -1543,6 +1604,7 @@
 
 **CAAUC.** 63 ¿El contrato, en caso de prever variaciones de precios, definió un mecanismo claro y objetivo para su cálculo?   
 **Respuesta: SI; NO; N/A**  
+**APLICA_A:** TODOS  
 **RANGO DE CRITICIDAD: RELEVANTE 3\.**  
 **ACCIÓN LEGAL: Nulidad de pagos por sobreprecio no tasado.(incumplimiento del Art. 133 LCP y 20 SUNAI).**   
 **ADVERTENCIA A LA GERENCIA: Pagar aumentos sin fórmula escrita o comprobación tasada en el contrato es un supuesto flagrante de daño patrimonial.**   
@@ -1569,6 +1631,7 @@
 
 **CAAUC.** 64 ¿El contrato designó formalmente a un Supervisor (o Ingeniero Inspector) con nombre y apellido, como responsable del seguimiento técnico y la validación de los pagos?  
 **Respuesta: SI; NO; N/A**  
+**APLICA_A:** SERVICIOS; OBRAS  
 **RANGO DE CRITICIDAD: CRÍTICO 5\.**  
 **Acción Legal: Nulidad de conformación de pagos por funcionarios no autorizados expresamente.(incumplimiento del Art. 136 LCP y 35 SUNAI).**   
 **ADVERTENCIA A LA GERENCIA: La supervisión genérica diluye la responsabilidad penal/administrativa en caso de obras defectuosas. El Estado exige responsables directos con nombre y cédula/RIF.**  

@@ -3,6 +3,7 @@
 
 **CAAUIR.** 1 ¿Elaboró la Comisión de Contrataciones designada el informe de recomendación conforme al artículo 95 de la LCP?  
 **respuestas: SI; NO; N/A**  
+**APLICA_A:** TODOS  
 **Rango de Criticidad: CRÍTICO: 5**  
 **Acción Legal:**  Nulidad del informe por vicio en la motivación y falta de fundamentación (incumplimiento del Art. 95 LCP y Art. 18.5 LOPA).  
 **Advertencia para la Gerencia:** Un informe de recomendación sin el análisis detallado carece de validez legal. Adjudicar basándose en un informe no motivado constituye un acto arbitrario sancionado por la Contraloría General de la República.  
@@ -44,6 +45,7 @@
 
 **CAAUIR.** 2 ¿Se señaló en el informe de recomendación la fecha de la emisión?  
 **respuestas: SI; NO; N/A**  
+**APLICA_A:** TODOS  
 **Rango de Criticidad: RELEVANTE: 3**  
 **Acción Legal:** Notificación para subsanación inmediata de fechas.                           (incumplimiento del Art. 22.8 RLCP y 18.3 LOPA).  
 **Advertencia para la Gerencia:** La omisión de fechas impide determinar si la recomendación ocurrió dentro del lapso de validez de las ofertas y garantías, rompiendo la preclusión de los lapsos del cronograma.  
@@ -71,6 +73,7 @@
 
 **CAAUIR.** 3¿Se señaló en el informe de recomendación la fecha de aprobación?  
 **respuestas: SI; NO; N/A**  
+**APLICA_A:** TODOS  
 **Rango de Criticidad: RELEVANTE: 3**  
 **Acción Legal:**  Notificación para subsanación inmediata de fechas.  
 (incumplimiento del Art. 22.8 RLCP y 18.3 LOPA).  
@@ -99,6 +102,7 @@
 
 **CAAUIR.** 4 ¿Se incluyó en dicho informe la identificación de los miembros de la Comisión de contrataciones?  
 **respuestas: SI; NO; N/A**  
+**APLICA_A:** TODOS  
 **Rango de Criticidad: ORDINARIA: 1**  
 **Acción Legal:**  Instrucción de ajuste administrativo por error de forma. (incumplimiento de los art. 22.1, RLCP)  
 **Advertencia para la Gerencia:** La identificación deficiente de los intervinientes dificulta la individualización de responsabilidades en futuras auditorías de la CGR.  
@@ -142,6 +146,7 @@
 
 **CAAUIR.** 5 ¿Incluyó dicho informe una relación exhaustiva de ofertas recibidas?  
 **respuestas: SI; NO; N/A**  
+**APLICA_A:** TODOS  
 **Rango de Criticidad: RELEVANTE: 3**  
 **Acción Legal:**  Reposición del informe para incluir el inventario total de propuestas . (incumplimiento de los art. 95 de la LCP y 22.3 del RLCP)  
 **Advertencia para la Gerencia:** La omisión de ofertas en el informe sugiere falta  de transparencia y limita la capacidad de control social sobre el proceso.  
@@ -172,6 +177,7 @@
 
 **CAAUIR. 6** ¿Se Incluyó en dicho informe la identificación de los participantes y de los oferentes?  
 **respuestas: SI; NO; N/A**  
+**APLICA_A:** TODOS  
 **Rango de Criticidad: ORDINARIA: 1**  
 **Acción Legal:**  Instrucción de ajuste administrativo por error de forma. (incumplimiento de los art. 22.1, 22.3 RLCP)  
 **Advertencia para la Gerencia:** La identificación deficiente de los intervinientes dificulta la individualización de responsabilidades en futuras auditorías de la CGR.  
@@ -202,6 +208,7 @@
 
 **CAAUIR. 7** ¿Contuvo el informe en cuestión una evaluación técnico-económica pormenorizada de cada propuesta, conforme a los criterios establecidos en el pliego de condiciones**?**  
 **respuestas: SI; NO; N/A**  
+**APLICA_A:** TODOS  
 **Rango de Criticidad: CRÍTICO: 5**  
 **Acción Legal:**  Nulidad Absoluta del Informe por falta de motivación técnica. (incumplimiento de los art. Artículos 66.13;  95 de la LCP y 22.4 del RLCP)  
 **Advertencia para la Gerencia:** Un informe sin evaluación pormenorizada carece de motivación, lo que produce su nulidad (Art. 9 LOPA).  
@@ -234,6 +241,7 @@
 
 **CAAUIR. 8** ¿Incluyó dicho informe evaluación de los aspectos legales de cada propuesta, conforme a los criterios establecidos en el pliego de condiciones?  
 **respuestas: SI; NO; N/A**  
+**APLICA_A:** TODOS  
 **Rango de Criticidad: CRÍTICO: 5**  
 **Acción Legal:**  Nulidad Absoluta del Informe. No se puede adjudicar sin un análisis detallado que demuestre que la oferta cumple con el pliego.(incumplimiento de los art. Artículo 95 de la LCP y 22.4 del RLCP)  
 **Advertencia para la Gerencia:**Ignorar la solvencia legal del oferente puede derivar en contratos nulos con empresas inhabilitadas.  
@@ -264,6 +272,7 @@
 
 **CAAUIR.** 9 ¿Incluyó dicho informe ponderación de criterios de evaluación establecidos en el pliego de condiciones?  
 **respuestas: SI; NO; N/A**  
+**APLICA_A:** TODOS  
 **Rango de Criticidad: RELEVANTE: 3**  
 **Acción Legal:**  Reposición del procedimiento de evaluación de méritos. (incumplimiento de los art. 66.13 y 95 LCP)  
 **Advertencia para la Gerencia:** Asignar puntajes sin justificar la metodología técnica convierte la recomendación en un acto administrativo arbitrario e impugnable.  
@@ -293,6 +302,7 @@
 
 **CAAUIR.** 10 ¿Incluyó dicho informe la justificación de los puntajes asignados?  
 **respuestas: SI; NO; N/A**  
+**APLICA_A:** TODOS  
 **Rango de Criticidad: RELEVANTE: 3**  
 **Acción Legal:**  Reposición del procedimiento para motivar los puntajes. (incumplimiento de los art. 66.13 y 95 LCP)  
 **Advertencia para la Gerencia:** Asignar puntajes sin justificar la metodología técnica convierte la recomendación en un acto administrativo arbitrario e impugnable.  
@@ -322,6 +332,7 @@
 
 **CAAUIR.** 11 ¿Incluyó dicho informe la verificación de correcta aplicación de parámetros evaluativos establecidos en el pliego de condiciones?  
 **respuestas: SI; NO; N/A**  
+**APLICA_A:** TODOS  
 **Rango de Criticidad: RELEVANTE: 3**  
 **Acción Legal:**  Reposición del procedimiento de evaluación de méritos. (incumplimiento de los art. 66.13 y 95 LCP, 4 Normas SUNAI)  
 **Advertencia para la Gerencia:**Errores en la aplicación de la matriz vician la recomendación final.  
@@ -350,6 +361,7 @@
 
 **CAAUIR. 12** ¿Adoptó el órgano contratante la recomendación de adjudicación contenida en el informe?  
 **respuestas: SI; NO; N/A**  
+**APLICA_A:** TODOS  
 **Rango de Criticidad: CRÍTICO: 5**  
 **Acción Legal:**  Nulidad del acto de adjudicación por contradicción técnica. (incumplimiento de los art. 95 de la LCP y 22.4.5.6 del RLCP)  
 **Advertencia para la Gerencia:** Apartarse de la recomendación técnica sin base legal constituye un acto arbitrario sancionable por la LOCGR.  
@@ -378,6 +390,7 @@
 
 **CAAUIR.** 13 Si el órgano contratante no adjudicó el contrato al oferente recomendado por la Comisión de Contrataciones, ¿Existió registro escrito de la motivación técnico-legal para apartarse de la propuesta?   
 **respuestas: SI; NO; N/A**  
+**APLICA_A:** TODOS  
 **Rango de Criticidad: CRÍTICO: 5**  
 **Acción Legal:**  Nulidad Absoluta por falta de motivación del acto de selección. La máxima autoridad no puede decidir por capricho; si ignora a la Comisión, la motivación debe ser exhaustiva o el acto será nulo por falso supuesto.(incumplimiento de los art. 95 LCP;  9,18.5 LOPA y 91.1 LOCGR.)  
 **Advertencia para la Gerencia:** El máximo jerarca asume responsabilidad personal directa si decide sin sustento escrito.  
@@ -409,6 +422,7 @@
 
 **CAAUIR. 14** ¿Se señalaron las causales específicas por las cuales se apartó de la recomendación?   
 **respuestas: SI; NO; N/A**  
+**APLICA_A:** TODOS  
 **Rango de Criticidad: CRÍTICO: 5**  
 **Acción Legal:**  Nulidad Absoluta del acto de selección..(incumplimiento de los art. 95 LCP;  9,18.5 LOPA y 91.1 LOCGR.)  
 **Advertencia para la Gerencia:** La falta de causales legales de rechazo produce el vicio de "falso supuesto".  
@@ -440,6 +454,7 @@
 
 **CAAUIR.** 15 ¿Especificó el informe la identificación plena del oferente cuya oferta se recomendó adjudicar?  
 **respuestas: SI; NO; N/A**  
+**APLICA_A:** TODOS  
 **Rango de Criticidad: ORDINARIA: 1**  
 **Acción Legal:**  Subsanación administrativa por error material en la identificación del sujeto. (incumplimiento de los art. 95 LCP y 18.4 LOPA)  
 **Advertencia para la Gerencia:** Errores materiales en el nombre o RIF de la empresa pueden invalidar el acto administrativo de adjudicación y la formalización del contrato.  
@@ -470,6 +485,7 @@
 
 **CAAUIR.** 16 ¿Sustentó el informe técnicamente la calificación de oferta más ventajosa, en función de los criterios de evaluación?  
 **respuestas: SI; NO; N/A**  
+**APLICA_A:** TODOS  
 **Rango de Criticidad: CRÍTICO: 5**  
 **Acción Legal:**  Nulidad de la recomendación. (incumplimiento de los art. 22.4 del RLCP y Art. 95 de la LCP.)  
 **Advertencia para la Gerencia:** Adjudicar sin demostrar la ventaja técnica/económica pone en riesgo el patrimonio público y la eficiencia del gasto.  
@@ -502,6 +518,7 @@
 
 **CAAUIR.** 17¿Estableció el informe de forma expresa en su recomendación el orden de prelación de méritos (1er, 2do, 3er lugar, oferta única)?  
 **respuestas: SI; NO; N/A**  
+**APLICA_A:** TODOS  
 **Rango de Criticidad: CRÍTICO: 5**  
 **Acción Legal:**  Reposición del informe. (incumplimiento de los art. 95, 109, 110 y 111 de la LCP)  
 **Advertencia para la Gerencia:** Omitir el orden de mérito impide llamar a la segunda opción ante incumplimiento, paralizando la necesidad administrativa.  
@@ -534,6 +551,7 @@
 
 **CAAUIR.** 18 ¿Estableció el informe de forma expresa en su recomendación la declaratoria de desierta de la modalidad de contratación?  
 **respuestas: SI; NO; N/A**  
+**APLICA_A:** TODOS  
 **Rango de Criticidad: ORDINARIA: 1**  
 **Acción Legal:**  Instrucción de corrección técnica si la recomendación no coincide con los supuestos legales para declarar desierta una modalidad. (incumplimiento del art. 113, 114 de la LCP )  
 **Advertencia para la Gerencia:** Son omisiones procedimentales que retrasan el cierre administrativo y exponen debilidades en la formación del expediente.  
@@ -567,6 +585,7 @@
 
 **CAAUIR.** 19 ¿El informe señaló la modalidad de selección aplicada y el objeto?  
 **respuestas: SI; NO; N/A**  
+**APLICA_A:** TODOS  
 **Rango de Criticidad: CRÍTICO: 5**  
 **Acción Legal:**  Nulidad del informe por objeto indeterminado o error en la calificación del procedimiento.(incumplimiento de los art. 78.1 de la LCP y Art. 22.2 del RLCP.)  
 **Advertencia para la Gerencia:** No se puede recomendar una adjudicación sobre un objeto que no está plenamente identificado.  
@@ -609,6 +628,7 @@
 
 **CAAUIR.** 20¿El informe detalló a los participantes u oferentes cuyas ofertas fueron descalificadas/ rechazadas?  
 **respuestas: SI; NO; N/A**  
+**APLICA_A:** TODOS  
 **Rango de Criticidad: ORDINARIA: 1**  
 **Acción Legal:**  Nulidad de la recomendación por violación al debido proceso. Rechazar ofertas sin justificación legal produce la nulidad de todo el proceso.(incumplimiento de los art. 76 y 84, 95 de la LCP y Art. 22.3 del RLCP.)  
 **Advertencia para la Gerencia**: Vulnerar el derecho a saber por qué se fue rechazado genera demandas contra el ente.  
@@ -693,6 +713,7 @@
    **CAAUIR.** 21 En caso de descalificaciones/rechazos, ¿se incluyó la justificación correspondiente para cada una?
 
    **respuestas: SI; NO; N/A**
+**APLICA_A:** TODOS  
 
    **Rango de Criticidad: CRÍTICO: 5**
 
@@ -784,6 +805,7 @@
    **CAAUIR. 22** ¿El informe de recomendación dejó explícita constancia de que la recepción y apertura de sobres se efectuó en un acto único?
 
    **respuestas: SI; NO; N/A**
+**APLICA_A:** TODOS  
 
    **Rango de Criticidad: ORDINARIA: 1**
 
@@ -826,6 +848,7 @@
    **CAAUIR. 23** ¿Se describió en el informe de recomendación la secuencia de eventos, indicando que la revisión de los documentos consignados se llevó a cabo posterior a la apertura de los sobres?
 
    **respuestas: SI; NO; N/A**
+**APLICA_A:** TODOS  
 
    **Rango de Criticidad: RELEVANTE: 3**
 
@@ -857,6 +880,7 @@
 
 **CAAUIR. 24** ¿Dejó constancia el informe de recomendación de la verificación de que los oferentes cumplieron con la presentación de la garantía de mantenimiento de la oferta?  
 **respuestas: SI; NO; N/A**  
+**APLICA_A:** TODOS  
 **Rango de Criticidad: RELEVANTE: 3**  
 **Acción Legal:**  Nulidad de la calificación del oferente beneficiario. (incumplimiento de los art. 63 y 64 de la LCP y Art. 135 del RLCP.)   
 **Advertencia para la Gerencia:** Recomendar a una empresa sin fianza de sostenimiento deja al Ente sin protección legal ante un retiro de oferta.  
@@ -891,6 +915,7 @@
    **Parágrafo Único: El expediente de contratación deberá contener las garantías señaladas en el pliego de condiciones, así como las penalizaciones que pudieran aplicarse por incumplimiento en la ejecución del contrato.**  
    **CAAUIR. 25** ¿Dejó constancia el informe de recomendación de la verificación de que los oferentes cumplieron con la presentación de la Declaración del cumplimiento del Compromiso de Responsabilidad Social?  
    **respuestas: SI; NO; N/A**  
+**APLICA_A:** TODOS  
    **Rango de Criticidad: ORDINARIA: 1**  
    **Acción Legal:**  Instrucción de subsanación inmediata. La omisión del CRS es una falta legal que impide el cierre administrativo futuro**.**(incumplimiento del art. 31 de la LCP.)  
    **Advertencia para la Gerencia:** Son omisiones procedimentales que retrasan el cierre administrativo y exponen debilidades en la formación del expediente.  
@@ -928,6 +953,7 @@
 
 **CAAUIR. 26** ¿Detalló el informe de recomendación cómo se verificó y se consideró la capacidad legal, económica y técnica de los oferentes como base para la recomendación de adjudicación?  
 **respuestas: SI; NO; N/A**  
+**APLICA_A:** TODOS  
 **Rango de Criticidad: RELEVANTE: 3**  
 **Acción Legal:**  Nulidad de la recomendación por insuficiencia técnica. (incumplimiento de los art.95 de la  LCP y Art. 22.4 del RLCP.)   
 **Advertencia para la Gerencia:** Recomendar adjudicar sin definir claramente el alcance o sin probar la solvencia técnica pone en riesgo directo el patrimonio del Ente.  
@@ -963,6 +989,7 @@
 
 **CAAUIR. 27** ¿Se especificó claramente en el informe de recomendación si la adjudicación se recomendaba de forma total o parcial a una empresa en particular, de ser el caso?  
 **respuestas: SI; NO; N/A**  
+**APLICA_A:** TODOS  
 **Rango de Criticidad: RELEVANTE: 3**  
 **Acción Legal:**  Nulidad de la recomendación por objeto indeterminado. (incumplimiento del art 109 de la  LCP.)   
 **Advertencia para la Gerencia:** Recomendar adjudicar sin definir claramente el alcance o sin probar la solvencia técnica pone en riesgo directo el patrimonio del Ente.  
@@ -998,6 +1025,7 @@
 
 **CAAUIR. 28**¿Especificó la recomendación del informe el monto de la contratación (con y sin IVA) y el lapso de ejecución/entrega?  
 **respuestas: SI; NO; N/A**  
+**APLICA_A:** TODOS  
 **Rango de Criticidad: ORDINARIA: 1**  
 **Acción Legal:**  Suspensión de la firma del contrato hasta que el informe precise estos términos, evitando vicios en la formalización contractual.(incumplimiento de los art. 58, 59 LCP; 91 del RLCP.)   
 **Advertencia para la Gerencia:** Errores en montos e IVA derivan en reparos por pagos indebidos.  
@@ -1031,6 +1059,7 @@
 
 **CAAUIR. 29** ¿El informe de recomendación incluyó una exhortación a la empresa a la cual se recomendó adjudicar el contrato para que presentara las garantías requeridas ante la Unidad Contratante?  
 **respuestas: SI; NO; N/A**  
+**APLICA_A:** TODOS  
 **Rango de Criticidad: RELEVANTE: 3**  
 **Acción Legal:**  Suspensión del trámite de formalización hasta incluir lapsos legales.(incumplimiento del art.116.3 de la LCP)   
 **Advertencia para la Gerencia:** El incumplimiento de estos términos legales impide que el contrato nazca con las seguridades financieras obligatorias.  
@@ -1064,6 +1093,7 @@
 
 **CAAUIR. 30** ¿Indicó la recomendación del informe que el beneficiario de la adjudicación disponía de un plazo no mayor de ocho (8) días hábiles para suscribir el contrato?  
 **respuestas: SI; NO; N/A**  
+**APLICA_A:** TODOS  
 **Rango de Criticidad: RELEVANTE: 3**  
 **Acción Legal:** Suspensión del trámite por incumplimiento de lapsos legales.(incumplimiento de los art.117 de la LCP)   
 **Advertencia para la Gerencia:** El retraso en la firma afecta el cronograma de ejecución y la vigencia de ofertas.  
@@ -1093,6 +1123,7 @@
 
 **CAAUIR. 31**¿Indicó el informe de recomendación que el adjudicatario disponía de un plazo máximo de cinco (5) días hábiles después de ser notificado para la presentación de las garantías?  
 **respuestas: SI; NO; N/A**  
+**APLICA_A:** TODOS  
 **Rango de Criticidad: RELEVANTE: 3**  
 **Acción Legal:**  Suspensión del trámite de formalización hasta incluir lapsos legales.(incumplimiento del art.127 del RLCP.)   
 **Advertencia para la Gerencia:** Sin garantías dentro del lapso, la adjudicación debe decaer.  
@@ -1133,6 +1164,7 @@
 
 **CAAUIR. 32** ¿Se sugirió en el informe al máximo jerarca considerar la disponibilidad presupuestaria y financiera para la adjudicación?  
 **respuestas: SI; NO; N/A**  
+**APLICA_A:** TODOS  
 **Rango de Criticidad: ORDINARIA: 1**  
 **Acción Legal:** Observación administrativa.(incumplimiento del art. 74 de la LCP.)  
 **Advertencia para la Gerencia:** Refleja una técnica administrativa deficiente que, aunque no anula el fondo, genera incertidumbre sobre la planificación presupuestaria.Recomendar el gasto sin fondos es una imprudencia administrativa grave.  
@@ -1163,6 +1195,7 @@
 
 **CAAUIR. 33** ¿Se incluyeron en el informe las firmas de los miembros de la Comisión de Contrataciones Públicas?  
 **respuestas: SI; NO; N/A**  
+**APLICA_A:** TODOS  
 **Rango de Criticidad: CRÍTICO: 5**  
 **Acción Legal:** Nulidad Absoluta e inexistencia jurídica del acto administrativo por falta de firma de la autoridad y ausencia de manifestación de voluntad del órgano colegiado (Art.3 LCC;  18.7 y 19.4 LOPA).  
 **Advertencia para la Gerencia:** Un informe sin las firmas de la Comisión no es un documento oficial, carece de valor probatorio y no puede sustentar legalmente el acto de adjudicación. La Contraloría (CGR) sanciona esta omisión como una negligencia grave en la formación del expediente.  
@@ -1200,6 +1233,7 @@
 
 **CAAUIR. 34** ¿El Informe de Recomendación dejó constancia de si se aplicó el mecanismo de actualización del Presupuesto Base (Art.25 NORMAS SUNAI) para determinar la razonabilidad de las ofertas y, de ser así, incluyó la justificación correspondiente?  
 **respuestas: SI; NO; N/A**  
+**APLICA_A:** TODOS  
 **Rango de Criticidad: ORDINARIA: 1**  
 **Acción Legal:** Observación administrativa.(incumplimiento de los art.Normas SUNAI 25.)  
 **Advertencia para la Gerencia:** No actualizar el presupuesto base en economías inflacionarias falsea la razonabilidad de precios.  
@@ -1245,6 +1279,7 @@
 
 **CAAUIR. 35** ¿El Informe de Recomendación documentó si durante el proceso se observaron omisiones de formalidades y si se decidió reponer el acto o subsanar, con la debida justificación, conforme al Art.22 de las Normas SUNAI?"  
 **respuestas: SI; NO; N/A**  
+**APLICA_A:** TODOS  
 **Rango de Criticidad: ORDINARIA: 1**  
 **Acción Legal:** Observación administrativa.(incumplimiento del art.Normas SUNAI 22\)  
 **Advertencia para la Gerencia:** Debilita la defensa jurídica del ente ante posibles demandas de oferentes descontentos.  
@@ -1272,6 +1307,7 @@
 
 **CAAUIR. 36** ¿El Informe de Recomendación incluyó un análisis sobre la estructura de costos de la oferta recomendada, concluyendo sobre la justicia y razonabilidad de sus precios, como lo exige el Art.21 de las Normas SUNAI?  
 **respuestas: SI; NO; N/A**  
+**APLICA_A:** SERVICIOS; OBRAS  
 **Rango de Criticidad: CRÍTICO: 5**  
 **Acción Legal:**  Nulidad Absoluta de la Recomendación por violación de orden público económico y riesgo patrimonial (incumplimiento del Art. 21 Normas SUNAI y 91.1 LOCGR).  
 **Advertencia para la Gerencia:** Omitir la validación y constancia de precios justos en el informe de recomendación permite la adjudicación con sobreprecios, generando responsabilidad administrativa directa y reparos fiscales.  

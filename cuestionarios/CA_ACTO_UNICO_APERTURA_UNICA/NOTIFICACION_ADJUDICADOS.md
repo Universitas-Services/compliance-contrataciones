@@ -4,6 +4,7 @@
 
 **CAAUNA.** 1 ¿El documento de notificación especificó la nomenclatura del procedimiento de contratación?  
 **Respuesta :SI; NO; N/A**  
+**APLICA_A:** TODOS  
 **RANGO DE CRITICIDAD:RELEVANTE 3**  
 **ACCIÓN LEGAL:** Instrucción de subsanación administrativa inmediata para garantizar la trazabilidad del expediente y evitar confusiones procesales ( incumplimiento del Art. 107.1 RLCP).  
 **ADVERTENCIA A LA GERENCIA: La falta de identificación exacta dificulta el control fiscal y la ubicación del trámite ante auditorías externas.**  
@@ -30,6 +31,7 @@
 
 **CAAUNA. 2 ¿El documento de notificación precisó el objeto del procedimiento de contratación efectuado?**  
 **Respuesta :SI; NO; N/A**  
+**APLICA_A:** TODOS  
 **RANGO DE CRITICIDAD:RELEVANTE 3**  
 **ACCIÓN LEGAL: Reposición del acto por falta de determinación del objeto ( incumplimiento del Art. 18.5 LOPA).**  
 **ADVERTENCIA A LA GERENCIA: Un objeto impreciso en la notificación genera ambigüedad legal sobre qué se está comunicando exactamente al beneficiario.**  
@@ -61,6 +63,7 @@
 
 **CAAUNA. 3 ¿El documento de notificación señaló el lugar donde fue dictado el acto administrativo?**  
 **Respuesta :SI; NO; N/A**  
+**APLICA_A:** TODOS  
 **RANGO DE CRITICIDAD:RELEVANTE 3**  
 **ACCIÓN LEGAL: Subsanación administrativa por omisión de requisitos de forma en la entrega ( incumplimiento del Art. 18.3 LOPA).**  
 **ADVERTENCIA A LA GERENCIA: El lugar determina la jurisdicción y competencia ante posibles recursos jerárquicos o judiciales.**  
@@ -87,6 +90,7 @@
 
 **CAAUNA. 4 ¿El documento de notificación indicó la fecha exacta en la que se entregó efectivamente el acto administrativo al adjudicatario?**  
 **Respuesta :SI; NO; N/A**  
+**APLICA_A:** TODOS  
 **RANGO DE CRITICIDAD:CRÍTICO 5**  
 **ACCIÓN LEGAL: Nulidad de la preclusión de lapsos por falta de fecha cierta en la entrega de la notificación.**  
 **ADVERTENCIA A LA GERENCIA: Sin la fecha de recepción por parte del interesado, es imposible computar los lapsos de 5 días para consignar garantías y 8 días para la firma del contrato. El proceso queda abierto indefinidamente.**  
@@ -113,6 +117,7 @@
 
 **CAAUNA. 5 ¿El documento de notificación incluyó la información legal de la empresa beneficiada con la adjudicación tales como: Razón social, Rif., Representante legal, correo electrónico, etc.?**  
 **Respuesta :SI; NO; N/A**  
+**APLICA_A:** TODOS  
 **RANGO DE CRITICIDAD:ORDINARIA 1**  
 **ACCIÓN LEGAL: Corrección material inmediata por error en la identificación del sujeto ( incumplimiento del Art. 18.4 LOPA).**  
 **ADVERTENCIA A LA GERENCIA: Errores en datos fiscales pueden causar el rechazo de la orden de pago o la fianza por parte del banco o seguro.**  
@@ -140,6 +145,7 @@
 
 **CAAUNA. 6** ¿La notificación de No Adjudicación fue suscrita por la Máxima Autoridad, la Unidad Contratante, la Secretaría de la Comisión o el funcionario con competencia delegada expresa para notificar la decisión?   
 **Respuesta :SI; NO; N/A**  
+**APLICA_A:** TODOS  
 **RANGO DE CRITICIDAD:CRÍTICO 5**  
 **ACCIÓN LEGAL: Nulidad absoluta por vicio de incompetencia subjetiva ( incumplimiento de los Art. 18.7; 19.4  LOPA y 16.5 LCP).**  
 **ADVERTENCIA A LA GERENCIA: La secretaria de la comisión es quien tiene la fe pública para dar a conocer los actos colegiados; si firma otro funcionario, la comunicación carece de validez legal.**  
@@ -166,6 +172,7 @@
 **29.Cualquier otro acto, hecho u omisión contrario a una norma legal o sublegal al plan de organización, las políticas, normativa interna, los manuales de sistemas y procedimientos que comprenden el control interno.**
 
 **CAAUNA. 7¿La notificación de la adjudicación especificó datos de la designación de la Comisión de Contrataciones Públicas?**  
+**APLICA_A:** TODOS  
 **RANGO DE CRITICIDAD:RELEVANTE 3**  
 **ACCIÓN LEGAL: Requerimiento de acreditación de la competencia legal del órgano sustanciador ( incumplimiento del Art. 15 RLCP; 18\. 7 LOPA).**  
 **ADVERTENCIA A LA GERENCIA: Omitir la designación oficial pone en duda la investidura legal de quienes gestionaron el concurso.**  
@@ -191,6 +198,7 @@
 
 **CAAUNA. 8 ¿La notificación comunicó de manera íntegra la decisión, ya sea transcribiendo la parte dispositiva del Acto de Adjudicación o anexando una copia fiel y exacta del mismo?**  
 **Respuesta :SI; NO; N/A**  
+**APLICA_A:** TODOS  
 **RANGO DE CRITICIDAD:CRÍTICO 5**  
 **ACCIÓN LEGAL: Reposición al estado de notificación por ocultamiento de información esencial ( incumplimiento de los Art. 73  18.5 y 18.6 LOPA).**  
 **ADVERTENCIA A LA GERENCIA: El interesado debe conocer no solo que ganó, sino los términos exactos de la adjudicación para poder aceptarla formalmente.**  
@@ -218,6 +226,7 @@
 
 **CAAUNA.9 ¿La notificación de la adjudicación precisó que la autoridad competente adjudicó el proceso de contratación?**  
 **Respuesta :SI; NO; N/A**  
+**APLICA_A:** TODOS  
 **RANGO DE CRITICIDAD:RELEVANTE 3**  
 **ACCIÓN LEGAL: Subsanación narrativa para acreditar que el acto fue dictado por el ordenador del gasto competente ( incumplimiento del Art. 66.8;109 ; 111 LCP).**  
 **ADVERTENCIA A LA GERENCIA: La ambigüedad sobre la autoridad que adjudicó vulnera el principio de jerarquía administrativa.**  
@@ -264,6 +273,7 @@
 
 **CAAUNA. 10 ¿El documento de notificación contempló la posibilidad de interponer recurso de reconsideración de ser el caso?**  
 **Respuesta :SI; NO; N/A**  
+**APLICA_A:** TODOS  
 **RANGO DE CRITICIDAD:CRÍTICO 5**  
 **ACCIÓN LEGAL: Nulidad de la notificación por indefensión del administrado ( incumplimiento del Art. 73; 94 LOPA).**  
 **ADVERTENCIA A LA GERENCIA: Omitir el derecho al recurso hace que el acto sea impugnable judicialmente en cualquier momento, impidiendo que la adjudicación quede firme.**  
@@ -275,6 +285,7 @@
 
 **CAAUNA. 11 ¿El documento de notificación estableció la procedencia de demandar la nulidad de actos administrativos con efectos particulares?**  
 **Respuesta :SI; NO; N/A**  
+**APLICA_A:** TODOS  
 **RANGO DE CRITICIDAD:CRÍTICO 5**  
 **ACCIÓN LEGAL: Nulidad de la notificación ( incumplimiento de los Art. 85 y 86 LOPA y Art. 25, 29 32 LOJCA).**  
 **ADVERTENCIA A LA GERENCIA: Es un requisito constitucional de tutela judicial efectiva; su falta es causal automática de anulación en tribunales.**  
@@ -290,6 +301,7 @@
 
 **CAAUNA. 12 ¿Detalló la notificación de adjudicación los datos personales exigidos legalmente del representante de la empresa adjudicataria?**  
 **Respuesta :SI; NO; N/A**  
+**APLICA_A:** TODOS  
 **RANGO DE CRITICIDAD:ORDINARIA 1**  
 **ACCIÓN LEGAL: Subsanación material de la identificación de los intervinientes ( incumplimiento del Art. 18.4 , 73 y 75 LOPA).**  
 **ADVERTENCIA A LA GERENCIA: Deficiencia de forma que retrasa la formalización presencial del contrato.**  
@@ -306,6 +318,7 @@
 
 **CAAUNA. 13¿La notificación adjuntó o hizo referencia explícita al Acto Administrativo de Adjudicación (indicando su número y fecha), como soporte íntegro de la decisión que se comunica?**  
 **Respuesta :SI; NO; N/A**  
+**APLICA_A:** TODOS  
 **RANGO DE CRITICIDAD:RELEVANTE 3**  
 **ACCIÓN LEGAL: Instrucción de anexo documental para soporte de la decisión**   
 **( incumplimiento del Art. 18.3 LOPA).**  
@@ -329,6 +342,7 @@
 
 **CAAUNA. 14 ¿Existe en el expediente el recibo firmado (acuse de recibo físico o electrónico) por parte del adjudicatario, dejando constancia de la fecha de entrega y contenido de la notificación?**  
 **Respuesta :SI; NO; N/A**  
+**APLICA_A:** TODOS  
 **RANGO DE CRITICIDAD:CRÍTICO 5**  
 **ACCIÓN LEGAL: Paralización del proceso de firma de contrato hasta acreditar la notificación efectiva ( incumplimiento 75 LOPA; 28 NORMAS SUNAI).**  
 **ADVERTENCIA A LA GERENCIA: Sin acuse de recibo, los lapsos legales de impugnación nunca se cierran, dejando el proceso abierto a demandas perpetuas por falta de notificación válida.**  
@@ -343,6 +357,7 @@
 
 **CAAUNA. 15 ¿La notificación informó explícitamente al adjudicatario sobre el plazo (no mayor de 5 días hábiles) para consignar las garantías contractuales, como requisito indispensable para la firma del contrato?**  
 **Respuesta :SI; NO; N/A**  
+**APLICA_A:** TODOS  
 **RANGO DE CRITICIDAD:RELEVANTE 3**  
 **ACCIÓN LEGAL: Instrucción de comunicación complementaria para evitar el retardo en la firma ( incumplimiento del Art. 127 RLCP; 19 SUNAI; 18\. 6 LOPA).**  
 **ADVERTENCIA A LA GERENCIA: Si no se le avisa al adjudicatario del plazo de las garantías, este puede alegar falta de información para retrasar su consignación, perjudicando el cronograma del Ente.**  
