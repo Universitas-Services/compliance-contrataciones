@@ -151,7 +151,12 @@ def calcular_estatus_desde_preguntas(
     *,
     tipo_coincide: bool = True,
 ) -> str:
-    """Verde / Amarillo / Rojo según criticidad de hallazgos (sin N/A)."""
+    """Verde / Amarillo / Rojo según criticidad de hallazgos (sin N/A).
+
+    Rojo solo con incumplimiento demostrado (no/parcial) en un ítem crítico;
+    «no consta en este documento» queda en Amarillo, igual que en
+    `llm_client._recalcular_estatus`: puede constar en otra pieza del expediente.
+    """
     if not tipo_coincide:
         return "Rojo"
     worst = "Verde"
@@ -160,7 +165,7 @@ def calcular_estatus_desde_preguntas(
         if est in {"si", "na"}:
             continue
         if est in _ESTADOS_HALLAZGO:
-            if _es_critico(p.rango_criticidad):
+            if est in {"no", "parcial"} and _es_critico(p.rango_criticidad):
                 return "Rojo"
             if worst != "Rojo":
                 worst = "Amarillo"
@@ -371,7 +376,10 @@ def construir_informe_usuario_markdown(
             grado = {
                 "no": "incumplimiento",
                 "parcial": "cumplimiento parcial",
-                "no_consta": "ausencia de evidencia suficiente en el documento",
+                "no_consta": (
+                    "que no consta en este documento (verificar en el resto "
+                    "del expediente)"
+                ),
             }.get(est, "observación")
             cuerpo = (p.respuesta or "").strip().rstrip(".")
             if not cuerpo or cuerpo.lower().startswith("estado:"):
