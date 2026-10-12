@@ -110,6 +110,23 @@ JSON_SHAPE_RUBRICA_LOTE = (
 )
 
 _RUBRICA_LOTE_TAM = 10
+# Temperatura baja en la rúbrica: respuestas cerradas y estables entre corridas.
+_TEMPERATURA_RUBRICA = float(os.getenv("LLM_TEMPERATURE_RUBRICA", "0.2"))
+# Preguntas condicionales («Si la contratación…», «En caso de…»): son las únicas
+# en las que el modelo puede responder N/A (la condición no se da en el caso).
+_ITEM_CONDICIONAL_RE = re.compile(
+    r"^\s*(?:\(\w+\)\s*)?¿?\s*(?:si\b|en\s+caso\b|cuando\b|de\s+ser\s+aplicable\b|"
+    r"durante\b[^¿]*\bsi\b|en\s+adquisiciones\s+que\s+superen\b)"
+    r"|\bde\s+ser\s+aplicable\b|\bsi\s+aplica\b|\ben\s+caso\s+de\s+que\b",
+    re.IGNORECASE,
+)
+_FRASE_CORPUS_RE = re.compile(
+    r"[;,.]?\s*\(?fundamento pendiente de ampliaci[oó]n del corpus\)?", re.IGNORECASE
+)
+
+
+def _es_item_condicional(texto: str) -> bool:
+    return bool(_ITEM_CONDICIONAL_RE.search(texto or ""))
 
 _TIPOS_DOC_GUIA = (
     "ACTIVIDADES_PREVIAS; ACTA_INICIO; PLIEGO_CONDICIONES; CONDICIONES_CONTRATACION; "
@@ -517,6 +534,7 @@ def _chat_create(
     messages: list,
     max_tokens: int,
     timeout: float | None = None,
+    temperature: float | None = None,
 ) -> tuple[str, str | None]:
     kwargs: dict = {
         "model": model,
@@ -525,6 +543,8 @@ def _chat_create(
     }
     if timeout is not None:
         kwargs["timeout"] = timeout
+    if temperature is not None:
+        kwargs["temperature"] = temperature
     response = client.chat.completions.create(**kwargs)
     _registrar_usage(response)
     finish = None
@@ -543,12 +563,14 @@ def _llamar_modelo(
     user_content: str | list[dict],
     max_tokens: int = 4096,
     timeout: float | None = None,
+    temperature: float | None = None,
 ) -> str:
     text, _finish = _llamar_modelo_meta(
         system=system,
         user_content=user_content,
         max_tokens=max_tokens,
         timeout=timeout,
+        temperature=temperature,
     )
     return text
 
@@ -559,6 +581,7 @@ def _llamar_modelo_meta(
     user_content: str | list[dict],
     max_tokens: int = 4096,
     timeout: float | None = None,
+    temperature: float | None = None,
 ) -> tuple[str, str | None]:
     messages = [
         {"role": "system", "content": system},
@@ -580,6 +603,7 @@ def _llamar_modelo_meta(
                 messages=messages,
                 max_tokens=max_tokens,
                 timeout=timeout,
+                temperature=temperature,
             )
         except _llm_errors as exc:
             primary_exc = exc
@@ -608,6 +632,7 @@ def _llamar_modelo_meta(
             messages=messages,
             max_tokens=max_tokens,
             timeout=timeout,
+            temperature=temperature,
         )
     except Exception as fallback_exc:  # noqa: BLE001
         raise RuntimeError(
@@ -1035,6 +1060,8 @@ def _formato_lote_items(items: list[dict], *, fund_max: int = 220) -> str:
         linea = f"- {it['codigo']}: {it['texto']}"
         if it.get("criticidad"):
             linea += f" [{it['criticidad']}]"
+        if _es_item_condicional(it.get("texto") or ""):
+            linea += " [CONDICIONAL]"
         fund = str(it.get("fundamento") or "").strip()
         if fund:
             if len(fund) > fund_max:
@@ -1171,6 +1198,11 @@ def _sanear_lote_rubrica(lote: list[dict], rub: list) -> list[dict]:
     (ya filtrados por tipo) se normalizan a no_consta.
     """
     permitidos = {str(it["codigo"]).strip().lower(): it["codigo"] for it in lote}
+    condicionales = {
+        str(it["codigo"]).strip().lower()
+        for it in lote
+        if _es_item_condicional(str(it.get("texto") or ""))
+    }
     out: list[dict] = []
     seen: set[str] = set()
     for item in rub or []:
@@ -1184,16 +1216,20 @@ def _sanear_lote_rubrica(lote: list[dict], rub: list) -> list[dict]:
             continue
         seen.add(key)
         estado = str(item.get("estado") or "").strip().lower().replace(" ", "_")
+        resp = str(item.get("respuesta") or item.get("explicacion") or "").strip()
         if estado in {"n/a", "n.a.", "na", "no_aplica", "noaplica"}:
-            # Ítems del lote son aplicables: N/A del modelo = sin evidencia
-            estado = "no_consta"
-            resp = (
-                "No consta evidencia en el documento para este ítem aplicable "
-                "(N/A del modelo normalizado; el N/A por tipo de contrato "
-                "solo lo asigna el sistema)."
-            )
-        else:
-            resp = str(item.get("respuesta") or item.get("explicacion") or "").strip()
+            if key in condicionales and resp:
+                # Pregunta condicional cuya condición no se da en el caso.
+                estado = "na"
+            else:
+                # Ítems del lote son aplicables: N/A del modelo = sin evidencia
+                estado = "no_consta"
+                resp = (
+                    "No consta evidencia en el documento para este ítem aplicable "
+                    "(N/A del modelo normalizado; el N/A por tipo de contrato "
+                    "solo lo asigna el sistema)."
+                )
+        resp = _FRASE_CORPUS_RE.sub("", resp).strip()
         if re.search(r"\bsimulado\b", resp, re.IGNORECASE):
             resp = re.sub(
                 r"\s*\([^)]*simulado[^)]*\)", "", resp, flags=re.IGNORECASE
@@ -1258,17 +1294,24 @@ def _evaluar_lote_rubrica(
         "- El campo id de cada fila DEBE ser exactamente el código listado; "
         "la 'respuesta' y 'ref' deben responder ESA pregunta, nunca otra.\n"
         "- Prohibido mezclar respuestas entre códigos o inventar ids.\n"
-        "- Prohibido inventar secciones, anexos o citas '(simulado)'. "
-        "Si no hay evidencia: estado=no_consta y ref=null.\n"
-        "- NO uses estado=na en este lote: los ítems ya son aplicables al tipo "
-        "de contrato de la sesión. Sin evidencia → no_consta.\n"
-        "- respuesta ≤ 40 palabras; ref con sección/pág real del documento.\n"
-        "- Si estado=no o parcial: en la respuesta puedes citar artículo SOLO "
-        "si está en el basamento recuperado o en el 'Fundamento cuestionario' "
-        "del ítem; si no hay cita, di 'fundamento pendiente de ampliación "
-        "del corpus' en la respuesta (no inventes artículos).\n"
-        "- No devuelvas fundamento_legal ni acción/advertencia: eso lo aporta "
-        "el cuestionario oficial.\n"
+        "- Prohibido inventar secciones, anexos o citas '(simulado)'.\n"
+        "CÓMO ELEGIR EL ESTADO:\n"
+        "- si: el documento contiene lo que pide la pregunta. Revisa TODO el "
+        "texto (encabezado, cuerpo, tablas, notas, firmas) antes de descartar.\n"
+        "- no: el documento contiene información que contradice o incumple el "
+        "requisito (p. ej. un plazo menor al exigido).\n"
+        "- parcial: lo contiene de forma incompleta.\n"
+        "- no_consta: el documento no contiene la información; ref=null.\n"
+        "- na: SOLO en ítems marcados [CONDICIONAL] cuando el documento muestra "
+        "que la condición no se da (p. ej. contratación no plurianual); explica "
+        "en la respuesta por qué no aplica. En los demás ítems no uses na.\n"
+        "RESPUESTA:\n"
+        "- respuesta ≤ 40 palabras con la evidencia concreta: dato, fecha, "
+        "monto, número o frase breve del documento que justifica el estado.\n"
+        "- ref: sección, punto, tabla o página real del documento (null si no "
+        "consta).\n"
+        "- No cites artículos en la respuesta ni devuelvas fundamento_legal, "
+        "acción o advertencia: eso lo aporta el cuestionario oficial.\n"
         f"SOLO JSON: {JSON_SHAPE_RUBRICA_LOTE}"
     )
     # Solo citas cortas para recuperar artículos; no volcar fundamentos íntegros.
@@ -1285,7 +1328,12 @@ def _evaluar_lote_rubrica(
         f"{kb_lote}\n\n"
         f"TEXTO DEL DOCUMENTO:\n{texto_doc}"
     )
-    raw = _llamar_modelo(system=system, user_content=user, max_tokens=4096)
+    raw = _llamar_modelo(
+        system=system,
+        user_content=user,
+        max_tokens=4096,
+        temperature=_TEMPERATURA_RUBRICA,
+    )
     try:
         data = _parsear_json_analisis(raw)
     except (json.JSONDecodeError, TypeError, ValueError):
@@ -1298,6 +1346,7 @@ def _evaluar_lote_rubrica(
                     f"Shape: {JSON_SHAPE_RUBRICA_LOTE}\nAnterior:\n{(raw or '')[:2000]}"
                 ),
                 max_tokens=4096,
+                temperature=_TEMPERATURA_RUBRICA,
             )
             data = _parsear_json_analisis(raw2)
         except (json.JSONDecodeError, TypeError, ValueError):
