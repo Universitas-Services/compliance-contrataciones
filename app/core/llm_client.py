@@ -112,6 +112,11 @@ JSON_SHAPE_RUBRICA_LOTE = (
 _RUBRICA_LOTE_TAM = 10
 # Temperatura baja en la rúbrica: respuestas cerradas y estables entre corridas.
 _TEMPERATURA_RUBRICA = float(os.getenv("LLM_TEMPERATURE_RUBRICA", "0.2"))
+# Razonamiento interno en la rúbrica (preguntas cerradas): bajo. Los tokens de
+# razonamiento cuentan dentro de max_tokens; con 4096 cortaban el JSON.
+_REASONING_RUBRICA = (os.getenv("LLM_REASONING_EFFORT_RUBRICA", "low") or "").strip() or None
+_MAX_TOKENS_RUBRICA = int(os.getenv("LLM_MAX_TOKENS_RUBRICA", "8192"))
+_REASONING_EFFORT_OK = True
 # Preguntas condicionales («Si la contratación…», «En caso de…»): son las únicas
 # en las que el modelo puede responder N/A (la condición no se da en el caso).
 _ITEM_CONDICIONAL_RE = re.compile(
@@ -535,7 +540,9 @@ def _chat_create(
     max_tokens: int,
     timeout: float | None = None,
     temperature: float | None = None,
+    reasoning_effort: str | None = None,
 ) -> tuple[str, str | None]:
+    global _REASONING_EFFORT_OK
     kwargs: dict = {
         "model": model,
         "max_tokens": max_tokens,
@@ -545,7 +552,18 @@ def _chat_create(
         kwargs["timeout"] = timeout
     if temperature is not None:
         kwargs["temperature"] = temperature
-    response = client.chat.completions.create(**kwargs)
+    if reasoning_effort and _REASONING_EFFORT_OK:
+        kwargs["reasoning_effort"] = reasoning_effort
+    try:
+        response = client.chat.completions.create(**kwargs)
+    except APIStatusError as exc:
+        # Modelos/proveedores sin «reasoning_effort»: se desactiva y se reintenta.
+        if "reasoning_effort" not in kwargs or _status_llm(exc) != 400:
+            raise
+        logger.warning("reasoning_effort no soportado por %s; se omite", model)
+        _REASONING_EFFORT_OK = False
+        kwargs.pop("reasoning_effort")
+        response = client.chat.completions.create(**kwargs)
     _registrar_usage(response)
     finish = None
     try:
@@ -564,6 +582,7 @@ def _llamar_modelo(
     max_tokens: int = 4096,
     timeout: float | None = None,
     temperature: float | None = None,
+    reasoning_effort: str | None = None,
 ) -> str:
     text, _finish = _llamar_modelo_meta(
         system=system,
@@ -571,6 +590,7 @@ def _llamar_modelo(
         max_tokens=max_tokens,
         timeout=timeout,
         temperature=temperature,
+        reasoning_effort=reasoning_effort,
     )
     return text
 
@@ -582,6 +602,7 @@ def _llamar_modelo_meta(
     max_tokens: int = 4096,
     timeout: float | None = None,
     temperature: float | None = None,
+    reasoning_effort: str | None = None,
 ) -> tuple[str, str | None]:
     messages = [
         {"role": "system", "content": system},
@@ -604,6 +625,7 @@ def _llamar_modelo_meta(
                 max_tokens=max_tokens,
                 timeout=timeout,
                 temperature=temperature,
+                reasoning_effort=reasoning_effort,
             )
         except _llm_errors as exc:
             primary_exc = exc
@@ -633,6 +655,7 @@ def _llamar_modelo_meta(
             max_tokens=max_tokens,
             timeout=timeout,
             temperature=temperature,
+            reasoning_effort=reasoning_effort,
         )
     except Exception as fallback_exc:  # noqa: BLE001
         raise RuntimeError(
@@ -1342,8 +1365,9 @@ def _evaluar_lote_rubrica(
     raw = _llamar_modelo(
         system=system,
         user_content=user,
-        max_tokens=4096,
+        max_tokens=_MAX_TOKENS_RUBRICA,
         temperature=_TEMPERATURA_RUBRICA,
+        reasoning_effort=_REASONING_RUBRICA,
     )
     try:
         data = _parsear_json_analisis(raw)
@@ -1356,8 +1380,9 @@ def _evaluar_lote_rubrica(
                     f"TODOS estos ids exactamente: {ids}.\n"
                     f"Shape: {JSON_SHAPE_RUBRICA_LOTE}\nAnterior:\n{(raw or '')[:2000]}"
                 ),
-                max_tokens=4096,
+                max_tokens=_MAX_TOKENS_RUBRICA,
                 temperature=_TEMPERATURA_RUBRICA,
+                reasoning_effort=_REASONING_RUBRICA,
             )
             data = _parsear_json_analisis(raw2)
         except (json.JSONDecodeError, TypeError, ValueError):
