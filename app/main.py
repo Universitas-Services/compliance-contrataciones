@@ -8,6 +8,8 @@ Incluye sandbox HTML de prueba en /sandbox (este repo es entorno de ensayo
 antes del deploy limpio a GH/GCP).
 """
 
+import logging
+import os
 from pathlib import Path
 
 from fastapi import Depends, FastAPI
@@ -19,7 +21,14 @@ from app.core.gateway_auth import docs_enabled, verify_gateway
 from app.core.security import SecurityHeadersMiddleware, cors_origins
 from app.routers import sesiones
 
-_docs = "/docs" if docs_enabled() else None
+# Sin esto los logger.info de `app.*` no salen bajo uvicorn (solo WARNING+).
+logging.getLogger("app").setLevel(os.getenv("LOG_LEVEL", "INFO").upper())
+if not logging.getLogger("app").handlers:
+    _h = logging.StreamHandler()
+    _h.setFormatter(logging.Formatter("%(levelname)s [%(name)s] %(message)s"))
+    logging.getLogger("app").addHandler(_h)
+
+_docs ="/docs" if docs_enabled() else None
 _redoc = "/redoc" if docs_enabled() else None
 _openapi = "/openapi.json" if docs_enabled() else None
 

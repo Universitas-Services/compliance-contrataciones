@@ -418,6 +418,18 @@ def particionar_items_por_tipo(
             aplicables.append(it)
         else:
             na_auto.append(it)
+    if items:
+        con_etiqueta = sum(it.aplica_a is not None for it in items)
+        logger.info(
+            "Partición por tipo %s: %d a evaluar, %d excluidos [%s] "
+            "(APLICA_A en %d/%d ítems; resto por heurística)",
+            tipo_contratacion or "N/D",
+            len(aplicables),
+            len(na_auto),
+            ", ".join(it.codigo for it in na_auto),
+            con_etiqueta,
+            len(items),
+        )
     return aplicables, na_auto
 
 
