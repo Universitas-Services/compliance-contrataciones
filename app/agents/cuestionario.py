@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 import re
 
+from app.agents.knowledge.cuestionarios_loader import cita_corta_fundamento
 from app.models.schemas import (
     DocumentoAnalizado,
     HallazgoAnalista,
@@ -267,9 +268,7 @@ def construir_json_analista(
             {
                 "codigo_pregunta": h.codigo_pregunta,
                 "pregunta_evaluada": h.pregunta_evaluada,
-                "fundamento_legal": _fundamento_para_json(
-                    h.fundamento_legal, accion=h.accion_legal
-                ),
+                "fundamento_legal": cita_corta_fundamento(h.fundamento_legal) or None,
                 "rango_criticidad": h.rango_criticidad,
                 "accion_legal": h.accion_legal,
                 "advertencia_gerencia": h.advertencia_gerencia,
@@ -279,23 +278,21 @@ def construir_json_analista(
     }
 
 
-def _fundamento_corto(fundamento: str | None, *, max_chars: int = 280) -> str:
-    """Cita breve para el informe de usuario (el JSON completo va al Jurídico)."""
-    t = re.sub(r"\*+", "", str(fundamento or "")).strip()
-    t = re.sub(r"\s+", " ", t)
-    if not t:
-        return "fundamento pendiente de ampliación del corpus"
-    # Preferir el bloque de normativa principal si existe
-    m = re.search(
-        r"(?:Normativa principal\s*)?((?:Art[ií]culo|Art\.?)[^.]{0,200}\.)",
-        t,
-        flags=re.IGNORECASE,
-    )
-    if m:
-        t = m.group(1).strip()
-    if len(t) > max_chars:
-        t = t[:max_chars].rstrip() + "…"
-    return t
+def _recortar_en_palabra(texto: str, n: int) -> str:
+    """Recorta a ≤ n caracteres sin partir palabras («Barquisim…» → «…»)."""
+    t = (texto or "").strip()
+    if len(t) <= n:
+        return t
+    corte = t[:n].rsplit(" ", 1)[0] if " " in t[:n] else t[:n]
+    return corte.rstrip(" ,;:(") + "…"
+
+
+def _fundamento_corto(fundamento: str | None) -> str:
+    """Cita breve para el informe de usuario («Art. 67 LCP; Art. 23 Normas SUNAI»).
+
+    El texto íntegro de los artículos queda en la sesión para el Jurídico.
+    """
+    return cita_corta_fundamento(fundamento)
 
 
 def construir_informe_usuario_markdown(
@@ -349,13 +346,16 @@ def construir_informe_usuario_markdown(
         ejemplos = []
         for p in aciertos[:5]:
             cod = p.codigo_pregunta or p.id
-            breve = (p.respuesta or "conforme").strip().rstrip(".")
-            if len(breve) > 120:
-                breve = breve[:120].rstrip() + "…"
+            breve = _recortar_en_palabra((p.respuesta or "conforme").strip().rstrip("."), 120)
             ejemplos.append(f"{cod} ({breve})")
         extra = ""
-        if len(aciertos) > 5:
-            extra = f" y {len(aciertos) - 5} punto(s) adicional(es) conforme(s)"
+        n_extra = len(aciertos) - 5
+        if n_extra > 0:
+            extra = (
+                " y 1 punto conforme más"
+                if n_extra == 1
+                else f" y {n_extra} puntos conformes más"
+            )
         partes.append(
             "Entre los aspectos que cumplen se destacan: "
             + "; ".join(ejemplos)
@@ -376,27 +376,27 @@ def construir_informe_usuario_markdown(
             cuerpo = (p.respuesta or "").strip().rstrip(".")
             if not cuerpo or cuerpo.lower().startswith("estado:"):
                 cuerpo = "No se constató el cumplimiento del control requerido"
-            if len(cuerpo) > 220:
-                cuerpo = cuerpo[:220].rstrip() + "…"
+            cuerpo = _recortar_en_palabra(cuerpo, 220)
             fund = _fundamento_corto(p.fundamento_legal)
             crit = (p.rango_criticidad or "N/D").strip()
-            accion = (p.accion_legal or "").strip()
-            adv = (p.advertencia_gerencia or "").strip()
+            # «( incumplimiento …)» viene así de los .md: normalizar el paréntesis.
+            accion = re.sub(r"\(\s+", "(", (p.accion_legal or "").strip())
+            adv = re.sub(r"\(\s+", "(", (p.advertencia_gerencia or "").strip())
             ref = (p.ref or "").strip()
 
             cuerpo = cuerpo.rstrip(".")
             fund = fund.rstrip(".")
             bloque = (
                 f"Hallazgo {i} ({cod}, criticidad {crit}): se observa "
-                f"{grado}. {cuerpo}. Fundamento: {fund}."
+                f"{grado}. {cuerpo}."
             )
+            if fund:
+                bloque += f" Fundamento: {fund}."
             if accion:
-                if len(accion) > 220:
-                    accion = accion[:220].rstrip() + "…"
+                accion = _recortar_en_palabra(accion, 220)
                 bloque += f" Acción recomendada: {accion.rstrip('.')}."
             if adv:
-                if len(adv) > 180:
-                    adv = adv[:180].rstrip() + "…"
+                adv = _recortar_en_palabra(adv, 180)
                 bloque += f" Advertencia a la gerencia: {adv.rstrip('.')}."
             if ref and ref.lower() != "null":
                 bloque += f" Evidencia: {ref}."

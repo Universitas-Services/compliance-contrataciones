@@ -301,6 +301,104 @@ def textos_preguntas(cuest: CuestionarioDocumento) -> list[str]:
     return [it.texto for it in cuest.items]
 
 
+# Encabezados del fundamento detallado: «**Reglamento de la Ley …:**» y
+# «**Artículo 6, numeral 2 de la Ley de Contrataciones Públicas:**».
+_LEY_HEAD_RE = re.compile(
+    r"\*\*\s*((?:Ley|Reglamento|Decreto|Normas|Constituci)[^*:]{3,200}?)\s*:\s*\*\*"
+)
+_ART_HEAD_RE = re.compile(
+    r"Art[ií]culo\s+(?P<num>\d+)"
+    r"(?P<det>(?:\s*,\s*(?:numeral(?:es)?|literal(?:es)?|ordinal(?:es)?)\s+[\w.]+"
+    r"(?:\s*(?:,|y)\s*[\w.]+)*)?)"
+    r"(?:\s+(?:de\s+la|del|de\s+las|de\s+los)\s+(?P<ley>[^:;.*]{5,160}?))?"
+    r"\s*\**\s*:"
+)
+_LEYES_ABREV = (
+    # Orden importa: «Normas de Control Interno … Contrataciones Públicas»
+    # debe resolverse antes que la LCP.
+    (("control interno",), "Normas SUNAI"),
+    (("sunai",), "Normas SUNAI"),
+    (("reglamento", "contrataciones"), "RLCP"),
+    (("contrataciones públicas",), "LCP"),
+    (("contencios",), "LOJCA"),
+    (("guerra económica",), "Ley contra la Guerra Económica"),
+    (("procedimientos administrativos",), "LOPA"),
+    (("corrupción",), "LCC"),
+    (("contraloría",), "LOCGR"),
+    (("constitución",), "CRBV"),
+    (("administración pública",), "LOAP"),
+    (("precios justos",), "LOPJ"),
+)
+
+
+def _abreviar_ley(nombre: str) -> str:
+    n = (nombre or "").lower()
+    for claves, abrev in _LEYES_ABREV:
+        if all(c in n for c in claves):
+            return abrev
+    return re.sub(r"\s+", " ", nombre or "").strip()[:60]
+
+
+def cita_corta_fundamento(fundamento: str | None, *, max_leyes: int = 4) -> str:
+    """«Art. 107 RLCP; Arts. 18 y 81 LOPA» a partir del fundamento del cuestionario.
+
+    Con el formato detallado toma los artículos de la «Normativa principal»
+    (o de todo el bloque si no hay sección principal). Con el formato antiguo
+    («67.1, 78.1 LCP; 17, 22 LCC») devuelve la cita tal cual. "" si no hay nada.
+    """
+    raw = str(fundamento or "")
+    if not raw.strip():
+        return ""
+    eventos: list[tuple[int, str, str]] = []
+    for m in _LEY_HEAD_RE.finditer(raw):
+        eventos.append((m.start(), "ley", m.group(1)))
+    for m in _ART_HEAD_RE.finditer(raw):
+        det = re.sub(r"\s+", " ", m.group("det") or "").strip(" ,")
+        det = re.sub(r"numeral(?:es)?", "num.", det)
+        det = re.sub(r"literal(?:es)?", "lit.", det)
+        ref = m.group("num") + (f" {det}" if det else "")
+        eventos.append((m.start(), "art", f"{ref}\x00{m.group('ley') or ''}"))
+    if not any(t == "art" for _, t, _ in eventos):
+        t = re.sub(r"\*+|\\", "", raw)
+        t = re.sub(r"\.\s+(?=\d)", ".", t)  # «166\. 1» (escape de Markdown) → «166.1»
+        t = re.sub(r"\s+", " ", t).strip(" .:")
+        t = re.sub(r"^(?:Art[ií]culos?|Arts?\.)\s*:?\s*", "", t, flags=re.IGNORECASE)
+        if len(t) > 200:
+            corte = t[:200].rfind(";")
+            t = t[: corte if corte > 40 else 200].rstrip(" ,;")
+        return f"Arts. {t}" if t[:1].isdigit() else t
+
+    eventos.sort()
+    comp = re.search(r"Normativa\s+complementaria", raw, re.IGNORECASE)
+    limite = comp.start() if comp else len(raw)
+    if not any(pos < limite and t == "art" for pos, t, _ in eventos):
+        limite = len(raw)
+
+    ley_actual = ""
+    grupos: dict[str, list[str]] = {}
+    for pos, tipo, val in eventos:
+        if pos >= limite:
+            break
+        if tipo == "ley":
+            ley_actual = val
+            continue
+        ref, ley = val.split("\x00")
+        # Sin ley identificable se cita solo el artículo («Art. 123»).
+        abrev = _abreviar_ley(ley or ley_actual)
+        refs = grupos.setdefault(abrev, [])
+        if ref not in refs:
+            refs.append(ref)
+
+    partes = []
+    for abrev, refs in list(grupos.items())[:max_leyes]:
+        if len(refs) == 1:
+            cita = f"Art. {refs[0]}"
+        else:
+            cita = f"Arts. {', '.join(refs[:-1])} y {refs[-1]}"
+        partes.append(f"{cita} {abrev}".strip())
+    return "; ".join(partes)
+
+
 def alcance_tipo_contrato(texto: str) -> frozenset[str] | None:
     """Tipos de contrato a los que aplica la pregunta.
 

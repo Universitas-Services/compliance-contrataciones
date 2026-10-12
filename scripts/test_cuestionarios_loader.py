@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from app.agents.knowledge.cuestionarios_loader import (
     _parse_items,
+    cita_corta_fundamento,
     particionar_items_por_tipo,
 )
 
@@ -85,6 +86,29 @@ def test_particion_por_tipo() -> None:
     print("OK partición por tipo (APLICA_A + heurística)")
 
 
+def test_cita_corta_fundamento() -> None:
+    detallado = (
+        "**Normativa principal:** **Reglamento de la Ley de Contrataciones Públicas:** "
+        "**Artículo 107:** El acta (...) **Ley Orgánica de Procedimientos "
+        "Administrativos:** **Artículo 18:** Todo acto (...) **Artículo 81:** La "
+        "administración (...) **Normativa complementaria:** **Ley Contra la "
+        "Corrupción:** **Artículo 17:** Las funcionarias (...)"
+    )
+    assert cita_corta_fundamento(detallado) == "Art. 107 RLCP; Arts. 18 y 81 LOPA"
+    inline = (
+        "**Normativa principal** **Artículo 6, numeral 2 de la Ley de Contrataciones "
+        "Públicas:** A los fines (...) **Artículo 7 del Reglamento de la Ley de "
+        "Contrataciones Públicas:** Para todas (...)"
+    )
+    assert cita_corta_fundamento(inline) == "Art. 6 num. 2 LCP; Art. 7 RLCP"
+    sunai = "**Normas de Control Interno Aplicables a Contrataciones Públicas (SUNAI):** **Artículo 23:** Las (...)"
+    assert cita_corta_fundamento(sunai) == "Art. 23 Normas SUNAI"
+    assert cita_corta_fundamento("67.1, 78.1 LCP; 17, 22 LCC") == "Arts. 67.1, 78.1 LCP; 17, 22 LCC"
+    assert cita_corta_fundamento(None) == ""
+    print("OK cita corta de fundamento")
+
+
 if __name__ == "__main__":
     test_parser_formato_detallado()
     test_particion_por_tipo()
+    test_cita_corta_fundamento()
