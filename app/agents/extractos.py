@@ -16,7 +16,7 @@ from dataclasses import dataclass
 
 # Por debajo de este tamaño el documento va completo en cada lote.
 UMBRAL_DOC_LARGO = 15_000
-_TAM_SECCION = 1_500
+_TAM_SECCION = 1000
 _TOPE_LOTE = 20_000
 _TOP_POR_PREGUNTA = 3
 _INICIO_CHARS = 2_500
@@ -80,8 +80,13 @@ def partir_en_secciones(texto: str) -> list[Seccion]:
         if es_fijo:
             _cerrar(buf)
             buf = ""
-            _cerrar(p)
-            continue
+            # El bloque de encabezado/pie termina en la primera línea en blanco;
+            # lo que sigue es cuerpo del documento y se trata como tal.
+            cab, sep, resto = p.strip("\n").partition("\n\n")
+            _cerrar(cab)
+            if not resto.strip():
+                continue
+            p = resto
         if buf and len(buf) + len(p) > _TAM_SECCION:
             _cerrar(buf)
             buf = ""
@@ -107,10 +112,17 @@ class _Indice:
         for c in self.tf:
             df.update(c.keys())
         n = len(secciones)
+        self.n = n
+        self.df = df
         self.idf = {t: math.log(1 + (n - d + 0.5) / (d + 0.5)) for t, d in df.items()}
 
     def puntuar(self, consulta: str) -> list[tuple[float, int]]:
         q = set(_terminos(consulta))
+        # Términos presentes en casi todo el documento («pliego», «condiciones»,
+        # «ofertas») no distinguen secciones: se descartan si quedan otros.
+        distintivos = {t for t in q if self.df.get(t, 0) <= 0.3 * self.n}
+        if distintivos:
+            q = distintivos
         out = []
         for i, tf in enumerate(self.tf):
             s = 0.0
@@ -157,27 +169,37 @@ class ExtractorLotes:
             acum += len(self.secciones[i].texto)
             if acum >= _FINAL_CHARS:
                 break
-        candidatos: list[tuple[float, int]] = []
+        # Candidatas por pregunta, en orden de relevancia.
+        por_pregunta: list[list[int]] = []
         for q in preguntas:
-            ranking = [r for r in self.indice.puntuar(q) if r[0] > 0]
-            if not ranking:
-                continue
-            candidatos.extend(ranking[:_TOP_POR_PREGUNTA])
+            ranking = [i for s, i in self.indice.puntuar(q) if s > 0]
+            cands = ranking[:_TOP_POR_PREGUNTA]
             if _PLAZOS_RE.search(q):
-                for score, i in ranking[_TOP_POR_PREGUNTA:]:
-                    if _FECHA_RE.search(self.secciones[i].texto) or self.secciones[i].texto.startswith("[tabla"):
-                        candidatos.append((score, i))
-                        break
-        # Mejores primero hasta el tope de caracteres; luego en orden original.
+                extra = next(
+                    (
+                        i
+                        for i in ranking[_TOP_POR_PREGUNTA:]
+                        if _FECHA_RE.search(self.secciones[i].texto)
+                        or self.secciones[i].texto.startswith("[tabla")
+                    ),
+                    None,
+                )
+                if extra is not None:
+                    cands.append(extra)
+            por_pregunta.append(cands)
+        # Reparto por rondas: primero la mejor sección de CADA pregunta, luego
+        # la segunda… así ninguna pregunta se queda sin su sección principal.
         total = sum(len(self.secciones[i].texto) for i in elegidas)
-        for score, i in sorted(candidatos, reverse=True):
-            if i in elegidas:
-                continue
-            largo = len(self.secciones[i].texto)
-            if total + largo > _TOPE_LOTE:
-                continue
-            elegidas.add(i)
-            total += largo
+        for ronda in range(_TOP_POR_PREGUNTA + 1):
+            for cands in por_pregunta:
+                if ronda >= len(cands) or cands[ronda] in elegidas:
+                    continue
+                i = cands[ronda]
+                largo = len(self.secciones[i].texto)
+                if total + largo > _TOPE_LOTE:
+                    continue
+                elegidas.add(i)
+                total += largo
         partes = []
         anterior = None
         for i in sorted(elegidas):
