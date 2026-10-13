@@ -1196,13 +1196,10 @@ def _user_contenido_documento(contenido: dict, chunks: list) -> str | list[dict]
 
 
 def _texto_plano_documento(contenido: dict, chunks: list) -> str:
+    """Texto íntegro: los lotes reciben extractos (ver app.agents.extractos)."""
     if chunks:
-        texto = "\n\n".join(str(c) for c in chunks if c)
-    else:
-        texto = str(contenido.get("contenido") or "")
-    if len(texto) > 50_000:
-        return texto[:50_000] + "\n…[truncado para lote de rúbrica]"
-    return texto
+        return "\n\n".join(str(c) for c in chunks if c)
+    return str(contenido.get("contenido") or "")
 
 
 def _fila_no_consta(codigo: str, *, motivo: str = "sin valoración del modelo") -> dict:
@@ -1343,6 +1340,14 @@ def _evaluar_lote_rubrica(
             if calendario
             else ""
         )
+        + (
+            "- Recibes EXTRACTOS del documento (secciones [Sx] elegidas para "
+            "estas preguntas), no el texto completo. Si la evidencia no está en "
+            "ellos, estado=no_consta y di 'no se halló en los extractos'; en ref "
+            "indica la sección [Sx] usada.\n"
+            if texto_doc.startswith("(EXTRACTOS")
+            else ""
+        )
         + "- No cites artículos en la respuesta ni devuelvas fundamento_legal, "
         "acción o advertencia: eso lo aporta el cuestionario oficial.\n"
         f"SOLO JSON: {JSON_SHAPE_RUBRICA_LOTE}"
@@ -1411,6 +1416,7 @@ def analizar_documento(
 ) -> dict:
     """Analiza un documento: identidad/coherencia + rúbrica por lotes."""
     from app.agents.knowledge import etiqueta_documento, etiqueta_tipo_contratacion
+    from app.agents.extractos import UMBRAL_DOC_LARGO, ExtractorLotes, texto_identidad
     from app.agents.knowledge.calendario import bloque_calendario
     from app.models.schemas import TipoContratacion
 
@@ -1516,8 +1522,17 @@ def analizar_documento(
     if not chunks and isinstance(contenido.get("contenido"), str) and contenido.get("contenido"):
         chunks = [contenido["contenido"]]
 
-    # Map-reduce previo solo si hay muchos chunks (identidad parcial)
-    if len(chunks) > 1:
+    texto_total = _texto_plano_documento(contenido, chunks)
+    if len(texto_total) > UMBRAL_DOC_LARGO:
+        # Documento largo: la identidad, la coherencia y los hechos clave se
+        # leen del inicio, el final y los encabezados; el detalle lo cubre la
+        # rúbrica por extractos (sin map-reduce de todo el documento).
+        user = (
+            "Contenido del documento a auditar (documento largo: inicio, "
+            "encabezados y final):\n\n" + texto_identidad(texto_total)
+        )
+    elif len(chunks) > 1:
+        # Map-reduce previo solo si hay muchos chunks (identidad parcial)
         parciales: list[dict] = []
         for i, chunk in enumerate(chunks, start=1):
             system_map = (
@@ -1607,8 +1622,10 @@ def analizar_documento(
         if not cuestionario_items and md_oficial and not preguntas:
             logger.info("Cuestionario MD presente sin ítems estructurados.")
 
-        texto_doc = _texto_plano_documento(contenido, chunks)
+        texto_doc = texto_total
         calendario = bloque_calendario(texto_doc)
+        # Documento corto → completo; largo → extractos relevantes por lote.
+        extractor = ExtractorLotes(texto_doc)
         esperados_llm = [it["codigo"] for it in items]
         lotes = [
             items[i : i + _RUBRICA_LOTE_TAM]
@@ -1623,7 +1640,7 @@ def analizar_documento(
                 lote=lote,
                 lote_idx=idx,
                 total_lotes=len(lotes),
-                texto_doc=texto_doc,
+                texto_doc=extractor.texto_para_lote([it["texto"] for it in lote]),
                 calendario=calendario,
             )
             rubrica_acc = _merge_rubrica_por_codigo(rubrica_acc, parcial)
@@ -1645,7 +1662,7 @@ def analizar_documento(
                         1,
                         (len(lote_retry) + _RUBRICA_LOTE_TAM - 1) // _RUBRICA_LOTE_TAM,
                     ),
-                    texto_doc=texto_doc,
+                    texto_doc=extractor.texto_para_lote([it["texto"] for it in sub]),
                     calendario=calendario,
                 )
                 rubrica_acc = _merge_rubrica_por_codigo(rubrica_acc, parcial)
