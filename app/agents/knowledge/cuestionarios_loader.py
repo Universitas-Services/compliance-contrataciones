@@ -339,6 +339,44 @@ def _abreviar_ley(nombre: str) -> str:
     return re.sub(r"\s+", " ", nombre or "").strip()[:60]
 
 
+def articulos_de_fundamento(
+    fundamento: str | None, *, max_chars: int = 700
+) -> list[tuple[str, str]]:
+    """[(«Art. 67 LCP», texto del artículo), …] del fundamento detallado.
+
+    Sirve para dar al Jurídico el texto normativo que ya trae el cuestionario
+    (la KB de legislación no tiene todas las leyes completas).
+    """
+    raw = str(fundamento or "")
+    eventos: list[tuple[int, str, re.Match]] = []
+    for m in _LEY_HEAD_RE.finditer(raw):
+        eventos.append((m.start(), "ley", m))
+    for m in _ART_HEAD_RE.finditer(raw):
+        eventos.append((m.start(), "art", m))
+    eventos.sort(key=lambda e: e[0])
+    out: list[tuple[str, str]] = []
+    ley_actual = ""
+    for k, (pos, tipo, m) in enumerate(eventos):
+        if tipo == "ley":
+            ley_actual = m.group(1)
+            continue
+        fin = eventos[k + 1][0] if k + 1 < len(eventos) else len(raw)
+        cuerpo = raw[m.end() : fin]
+        cuerpo = re.sub(r"\*+|\\", "", cuerpo)
+        cuerpo = re.sub(r"Normativa\s+(?:principal|complementaria)\s*:?", "", cuerpo, flags=re.I)
+        cuerpo = re.sub(r"\s+", " ", cuerpo).strip(" :")
+        if len(cuerpo) < 15:
+            continue
+        if len(cuerpo) > max_chars:
+            cuerpo = cuerpo[:max_chars].rsplit(" ", 1)[0] + "…"
+        det = re.sub(r"\s+", " ", m.group("det") or "").strip(" ,")
+        det = re.sub(r"numeral(?:es)?", "num.", det)
+        ref = m.group("num") + (f" {det}" if det else "")
+        cita = f"Art. {ref} {_abreviar_ley(m.group('ley') or ley_actual)}".strip()
+        out.append((cita, cuerpo))
+    return out
+
+
 def cita_corta_fundamento(fundamento: str | None, *, max_leyes: int = 4) -> str:
     """«Art. 107 RLCP; Arts. 18 y 81 LOPA» a partir del fundamento del cuestionario.
 

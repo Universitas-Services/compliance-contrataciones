@@ -1765,6 +1765,80 @@ def _expediente_para_juridico(docs: list) -> str:
     return "\n".join(bloques) if bloques else "(sin documentos auditados)"
 
 
+# Normas que el dictamen cita siempre (formato oficial: nulidad, reposición,
+# medida cautelar).
+_ARTICULOS_BASE_JURIDICO = ("Art. 19 LOPA", "Art. 91 LOCGR", "Art. 98 RLCP")
+_LEY_KB = {"LOPA": "LOPA", "LOCGR": "LOCGR", "RLCP": "RLCP", "LCP": "LCP", "Normas SUNAI": "SUNAI"}
+
+
+def _basamento_juridico(
+    docs: list, modalidad: Modalidad | None, *, max_chars: int = 9_000
+) -> str:
+    """Texto de los artículos que sustentan el dictamen.
+
+    Prioriza las normas base (LOPA 19, LOCGR 91, RLCP 98) y las de los
+    hallazgos críticos no/parcial. El texto sale de la KB de legislación o,
+    si no está ahí, del fundamento detallado de los cuestionarios.
+    """
+    from app.agents.knowledge.basamento_loader import _busca_articulo
+    from app.agents.knowledge.cuestionarios_loader import (
+        articulos_de_fundamento,
+        cargar_cuestionario,
+    )
+    from app.models.schemas import TipoDocumento
+
+    # Índice cita → texto con todos los fundamentos de la modalidad.
+    indice: dict[str, str] = {}
+    if modalidad is not None:
+        for tipo in TipoDocumento:
+            cuest = cargar_cuestionario(modalidad, tipo)
+            for it in cuest.items if cuest else ():
+                for cita, texto in articulos_de_fundamento(it.fundamento_legal):
+                    indice.setdefault(cita, texto)
+
+    def _prioridad(p: Any) -> int:
+        est = (getattr(p, "estado", "") or "").lower()
+        crit = (getattr(p, "rango_criticidad", "") or "").upper()
+        critico = "5" in crit or "CRÍTIC" in crit or "CRITIC" in crit
+        return (0 if est in {"no", "parcial"} else 1) * 2 + (0 if critico else 1)
+
+    citas: list[str] = list(_ARTICULOS_BASE_JURIDICO)
+    hall = [
+        p
+        for d in docs
+        for p in (getattr(d, "preguntas_seguimiento", None) or [])
+        if (p.estado or "").lower() in {"no", "parcial", "no_consta"}
+    ]
+    for p in sorted(hall, key=_prioridad):
+        for cita, _ in articulos_de_fundamento(p.fundamento_legal)[:2]:
+            if cita not in citas:
+                citas.append(cita)
+
+    bloques: list[str] = []
+    total = 0
+    for cita in citas:
+        m = re.match(r"Art\. (\d+)(?:\s+num\.[^A-Z]*)?\s+(.+)$", cita)
+        texto = None
+        if m and m.group(2) in _LEY_KB:
+            ex = _busca_articulo(_LEY_KB[m.group(2)], m.group(1))
+            if ex is not None:
+                texto = re.sub(r"\s+", " ", re.sub(r"[#*]+", "", ex.texto)).strip()[:900]
+        texto = texto or indice.get(cita)
+        if not texto:
+            continue
+        bloque = f"- {cita}: {texto}"
+        if total + len(bloque) > max_chars:
+            break
+        bloques.append(bloque)
+        total += len(bloque)
+    if not bloques:
+        return ""
+    return (
+        "BASAMENTO DEL EXPEDIENTE (texto normativo; cita SOLO estos artículos o "
+        "los de los hallazgos):\n" + "\n".join(bloques)
+    )
+
+
 def consultar_juridico(
     sesion: SesionCompliance,
     *,
@@ -1877,7 +1951,7 @@ def consultar_juridico(
                 }
             )
 
-    kb_jur = _bloque_basamento(
+    kb_jur = _basamento_juridico(docs, sesion.modalidad) or _bloque_basamento(
         _fundamentos_sesion(sesion),
         limite_chars=1_200,
     )
@@ -1893,7 +1967,8 @@ def consultar_juridico(
         "## 3. Análisis de Interrelación (Cadena de Nulidad)\n"
         "## 4. Conclusión, Solución y Llamado a la Acción\n"
         "LÍMITE DE EXTENSIÓN: máximo ~1.400 palabras en total. "
-        "Sección 1: 1 párrafo. Sección 2: tabla breve + 2-3 frases (flag/umbrales). "
+        "Sección 1: 1 párrafo. Sección 2: matriz en LISTA (sin tablas Markdown) "
+        "+ 2-3 frases (flag/umbrales). "
         "Sección 3: 2 párrafos (raíz + contaminación a docs pendientes). "
         "Sección 4: 1 párrafo de conclusión + 1 párrafo de medidas (paralización/"
         "subsanación/responsables). "
