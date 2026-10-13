@@ -137,14 +137,31 @@ def extraer_pdf_ocr(path: str) -> DocumentoCanonico:
 def extraer_docx(path: str) -> DocumentoCanonico:
     doc = Document(path)
     partes: list[str] = []
+    vistos: set[str] = set()
     for section in doc.sections:
+        # Encabezado/pie general, de primera página y de páginas pares, con sus
+        # tablas: ahí suele ir la nomenclatura del procedimiento (logo + texto).
         for hf_name, hf in (
             ("encabezado", section.header),
+            ("encabezado primera página", section.first_page_header),
+            ("encabezado páginas pares", section.even_page_header),
             ("pie", section.footer),
+            ("pie primera página", section.first_page_footer),
+            ("pie páginas pares", section.even_page_footer),
         ):
+            if hf.is_linked_to_previous:
+                continue
             textos = [p.text.strip() for p in hf.paragraphs if p.text.strip()]
-            if textos:
-                partes.append(f"[{hf_name}]\n" + "\n".join(textos))
+            for tabla in hf.tables:
+                for fila in tabla.rows:
+                    for celda in fila.cells:
+                        t = celda.text.strip()
+                        if t and t not in textos:
+                            textos.append(t)
+            bloque = "\n".join(textos)
+            if bloque and bloque not in vistos:
+                vistos.add(bloque)
+                partes.append(f"[{hf_name}]\n{bloque}")
     for parrafo in doc.paragraphs:
         texto = parrafo.text.strip()
         if texto:
