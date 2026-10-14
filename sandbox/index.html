@@ -150,6 +150,7 @@
         <div class="metric"><span>Tokens prompt</span><b id="mPrompt">—</b></div>
         <div class="metric"><span>Tokens completion</span><b id="mComp">—</b></div>
         <div class="metric"><span>Tokens total</span><b id="mTot">—</b></div>
+        <div class="metric"><span>Tokens en caché</span><b id="mCache">—</b></div>
         <div class="metric"><span>Llamadas LLM</span><b id="mCalls">—</b></div>
       </div>
       <div class="card">
@@ -208,6 +209,7 @@
       $("mPrompt").textContent = m.tokens_prompt ?? "—";
       $("mComp").textContent = m.tokens_completion ?? "—";
       $("mTot").textContent = m.tokens_total ?? "—";
+      $("mCache").textContent = m.tokens_cache ?? "—";
       $("mCalls").textContent = m.llamadas_llm ?? "—";
     }
 

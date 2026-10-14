@@ -152,6 +152,8 @@ class MetricasAnalisis(BaseModel):
     tokens_prompt: int = 0
     tokens_completion: int = 0
     tokens_total: int = 0
+    # Parte de tokens_prompt servida desde la caché implícita (más barata).
+    tokens_cache: int = 0
     llamadas_llm: int = 0
 
 

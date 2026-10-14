@@ -40,6 +40,7 @@ def reset_llm_usage() -> None:
             "tokens_prompt": 0,
             "tokens_completion": 0,
             "tokens_total": 0,
+            "tokens_cache": 0,
             "llamadas_llm": 0,
         }
     )
@@ -53,9 +54,19 @@ def snapshot_llm_usage() -> dict[str, int]:
             "tokens_prompt": 0,
             "tokens_completion": 0,
             "tokens_total": 0,
+            "tokens_cache": 0,
             "llamadas_llm": 0,
         }
     return dict(cur)
+
+
+def _tokens_cache(usage: Any) -> int:
+    """Tokens de entrada servidos desde la caché implícita de Gemini (más baratos)."""
+    det = getattr(usage, "prompt_tokens_details", None)
+    if det is None:
+        return 0
+    val = det.get("cached_tokens") if isinstance(det, dict) else getattr(det, "cached_tokens", 0)
+    return int(val or 0)
 
 
 def _registrar_usage(response: Any) -> None:
@@ -72,6 +83,7 @@ def _registrar_usage(response: Any) -> None:
     cur["tokens_prompt"] = cur.get("tokens_prompt", 0) + prompt
     cur["tokens_completion"] = cur.get("tokens_completion", 0) + completion
     cur["tokens_total"] = cur.get("tokens_total", 0) + total
+    cur["tokens_cache"] = cur.get("tokens_cache", 0) + _tokens_cache(usage)
     cur["llamadas_llm"] = cur.get("llamadas_llm", 0) + 1
 
 JSON_SHAPE_HINT = (
@@ -584,7 +596,15 @@ def _chat_create(
     except Exception:  # noqa: BLE001
         finish = None
     if finish:
-        logger.info("LLM finish_reason=%s model=%s max_tokens=%s", finish, model, max_tokens)
+        usage = getattr(response, "usage", None)
+        logger.info(
+            "LLM finish_reason=%s model=%s max_tokens=%s prompt=%s cache=%s",
+            finish,
+            model,
+            max_tokens,
+            getattr(usage, "prompt_tokens", None),
+            _tokens_cache(usage) if usage is not None else None,
+        )
     return _respuesta_texto(response), finish
 
 
@@ -1318,6 +1338,9 @@ def _evaluar_lote_rubrica(
     calendario: str = "",
 ) -> list[dict]:
     ids = [it["codigo"] for it in lote]
+    # Orden pensado para la caché implícita de Gemini: lo fijo del documento
+    # (system + calendario + texto) va primero e idéntico en todos los lotes;
+    # lo que cambia por lote (ítems, ids, basamento) va al final del mensaje.
     system = (
         (system_experto + "\n\n" if system_experto else "")
         + "ANALISTA — LOTE DE RÚBRICA.\n"
@@ -1326,7 +1349,8 @@ def _evaluar_lote_rubrica(
         f"Tipo de contrato de la sesión: «{tipo_contrato_label or 'N/D'}».\n"
         f"Nomenclatura de sesión: «{nom}» (contexto; no inventes).\n"
         "REGLAS ESTRICTAS DE ALINEACIÓN (1 fila = 1 código):\n"
-        f"- Debes devolver exactamente {len(ids)} filas; ids = {ids}.\n"
+        "- Devuelve exactamente una fila por cada código del lote (la lista "
+        "de ids va al final del mensaje).\n"
         "- El campo id de cada fila DEBE ser exactamente el código listado; "
         "la 'respuesta' y 'ref' deben responder ESA pregunta, nunca otra.\n"
         "- Prohibido mezclar respuestas entre códigos o inventar ids.\n"
@@ -1376,12 +1400,13 @@ def _evaluar_lote_rubrica(
         _bloque_basamento(fund_citas, limite_chars=2_000) if fund_citas.strip() else ""
     )
     user = (
-        f"Documento: {nombre_doc}\n"
-        f"Lote {lote_idx}/{total_lotes} — ítems a evaluar (1:1):\n"
-        f"{_formato_lote_items(lote)}\n\n"
-        f"{kb_lote}\n\n"
+        f"Documento: {nombre_doc}\n\n"
         + (f"{calendario}\n\n" if calendario else "")
-        + f"TEXTO DEL DOCUMENTO:\n{texto_doc}"
+        + f"TEXTO DEL DOCUMENTO:\n{texto_doc}\n\n"
+        + (f"{kb_lote}\n\n" if kb_lote else "")
+        + f"Lote {lote_idx}/{total_lotes} — ítems a evaluar (1:1):\n"
+        f"{_formato_lote_items(lote)}\n\n"
+        f"Debes devolver exactamente {len(ids)} filas; ids = {ids}."
     )
     raw = _llamar_modelo(
         system=system,
@@ -1731,6 +1756,7 @@ def analizar_documento(
         "tokens_prompt": usage.get("tokens_prompt", 0),
         "tokens_completion": usage.get("tokens_completion", 0),
         "tokens_total": usage.get("tokens_total", 0),
+        "tokens_cache": usage.get("tokens_cache", 0),
         "llamadas_llm": usage.get("llamadas_llm", 0),
     }
     return data

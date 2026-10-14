@@ -839,6 +839,7 @@ async def cargar_documento(
             tokens_prompt=int(met_raw.get("tokens_prompt") or 0),
             tokens_completion=int(met_raw.get("tokens_completion") or 0),
             tokens_total=int(met_raw.get("tokens_total") or 0),
+            tokens_cache=int(met_raw.get("tokens_cache") or 0),
             llamadas_llm=int(met_raw.get("llamadas_llm") or 0),
         )
 
