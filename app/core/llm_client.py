@@ -1338,9 +1338,6 @@ def _evaluar_lote_rubrica(
     calendario: str = "",
 ) -> list[dict]:
     ids = [it["codigo"] for it in lote]
-    # Orden pensado para la caché implícita de Gemini: lo fijo del documento
-    # (system + calendario + texto) va primero e idéntico en todos los lotes;
-    # lo que cambia por lote (ítems, ids, basamento) va al final del mensaje.
     system = (
         (system_experto + "\n\n" if system_experto else "")
         + "ANALISTA — LOTE DE RÚBRICA.\n"
@@ -1349,8 +1346,7 @@ def _evaluar_lote_rubrica(
         f"Tipo de contrato de la sesión: «{tipo_contrato_label or 'N/D'}».\n"
         f"Nomenclatura de sesión: «{nom}» (contexto; no inventes).\n"
         "REGLAS ESTRICTAS DE ALINEACIÓN (1 fila = 1 código):\n"
-        "- Devuelve exactamente una fila por cada código del lote (la lista "
-        "de ids va al final del mensaje).\n"
+        f"- Debes devolver exactamente {len(ids)} filas; ids = {ids}.\n"
         "- El campo id de cada fila DEBE ser exactamente el código listado; "
         "la 'respuesta' y 'ref' deben responder ESA pregunta, nunca otra.\n"
         "- Prohibido mezclar respuestas entre códigos o inventar ids.\n"
@@ -1400,13 +1396,12 @@ def _evaluar_lote_rubrica(
         _bloque_basamento(fund_citas, limite_chars=2_000) if fund_citas.strip() else ""
     )
     user = (
-        f"Documento: {nombre_doc}\n\n"
-        + (f"{calendario}\n\n" if calendario else "")
-        + f"TEXTO DEL DOCUMENTO:\n{texto_doc}\n\n"
-        + (f"{kb_lote}\n\n" if kb_lote else "")
-        + f"Lote {lote_idx}/{total_lotes} — ítems a evaluar (1:1):\n"
+        f"Documento: {nombre_doc}\n"
+        f"Lote {lote_idx}/{total_lotes} — ítems a evaluar (1:1):\n"
         f"{_formato_lote_items(lote)}\n\n"
-        f"Debes devolver exactamente {len(ids)} filas; ids = {ids}."
+        f"{kb_lote}\n\n"
+        + (f"{calendario}\n\n" if calendario else "")
+        + f"TEXTO DEL DOCUMENTO:\n{texto_doc}"
     )
     raw = _llamar_modelo(
         system=system,
