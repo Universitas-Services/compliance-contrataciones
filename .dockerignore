@@ -21,3 +21,6 @@ tmp/
 Thumbs.db
 PROMPTS.md
 scripts/fixtures/
+
+# Material de revisión local (Excel, dictámenes de prueba)
+revision_nancy/

@@ -28,3 +28,6 @@ scripts/fixtures/
 !cuestionarios/**/*.md
 !basamento-legal/README.md
 !cuestionarios/README.md
+
+# Material de revisión local (Excel, dictámenes de prueba)
+revision_nancy/
