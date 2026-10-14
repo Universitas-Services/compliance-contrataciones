@@ -49,7 +49,22 @@ def test_identidad_inicio_y_final() -> None:
     print("OK identidad con inicio y final")
 
 
+def test_lotes_parejos() -> None:
+    from app.core.llm_client import _partir_en_lotes
+
+    def tam(n: int, t: int) -> list[int]:
+        return [len(x) for x in _partir_en_lotes([{"i": i} for i in range(n)], t)]
+
+    assert tam(26, 15) == [13, 13]
+    assert tam(67, 10) == [10, 10, 10, 10, 9, 9, 9]
+    assert tam(15, 15) == [15] and tam(16, 15) == [8, 8] and tam(0, 15) == []
+    items = [{"i": i} for i in range(31)]
+    assert [x for lote in _partir_en_lotes(items, 15) for x in lote] == items
+    print("OK lotes parejos de rúbrica")
+
+
 if __name__ == "__main__":
     test_documento_corto_va_completo()
     test_documento_largo_extractos()
     test_identidad_inicio_y_final()
+    test_lotes_parejos()

@@ -121,7 +121,26 @@ JSON_SHAPE_RUBRICA_LOTE = (
     '"respuesta": str, "ref": str|null}]}'
 )
 
-_RUBRICA_LOTE_TAM = 10
+# Preguntas por llamada de rúbrica. Cada lote reenvía instrucciones y documento:
+# lotes más grandes = menos llamadas y tokens. En documentos largos (extractos)
+# se mantiene 10 para no repartir el tope de extractos entre más preguntas.
+_RUBRICA_LOTE_TAM = int(os.getenv("LLM_RUBRICA_LOTE_TAM", "15"))
+_RUBRICA_LOTE_TAM_LARGO = int(os.getenv("LLM_RUBRICA_LOTE_TAM_LARGO", "10"))
+
+
+def _partir_en_lotes(items: list[dict], tam: int) -> list[list[dict]]:
+    """Lotes parejos de como máximo `tam` (26 con tam 15 → 13 + 13, no 15 + 11)."""
+    if not items:
+        return []
+    n = -(-len(items) // max(1, tam))
+    base, extra = divmod(len(items), n)
+    lotes: list[list[dict]] = []
+    inicio = 0
+    for k in range(n):
+        fin = inicio + base + (1 if k < extra else 0)
+        lotes.append(items[inicio:fin])
+        inicio = fin
+    return lotes
 # Temperatura baja en la rúbrica: respuestas cerradas y estables entre corridas.
 _TEMPERATURA_RUBRICA = float(os.getenv("LLM_TEMPERATURE_RUBRICA", "0.2"))
 # Razonamiento interno en la rúbrica (preguntas cerradas): bajo. Los tokens de
@@ -1663,10 +1682,18 @@ def analizar_documento(
         # Documento corto → completo; largo → extractos relevantes por lote.
         extractor = ExtractorLotes(texto_doc)
         esperados_llm = [it["codigo"] for it in items]
-        lotes = [
-            items[i : i + _RUBRICA_LOTE_TAM]
-            for i in range(0, len(items), _RUBRICA_LOTE_TAM)
-        ]
+        # Corto: el documento completo viaja en cada lote → lotes más grandes.
+        # Largo: los extractos se reparten entre las preguntas del lote → lotes
+        # chicos para no diluir la evidencia de cada pregunta.
+        tam_lote = _RUBRICA_LOTE_TAM_LARGO if extractor.largo else _RUBRICA_LOTE_TAM
+        lotes = _partir_en_lotes(items, tam_lote)
+        logger.info(
+            "Rúbrica: %s ítems en %s lote(s) (máx. %s, documento %s)",
+            len(items),
+            len(lotes),
+            tam_lote,
+            "largo" if extractor.largo else "corto",
+        )
         for idx, lote in enumerate(lotes, start=1):
             parcial = _evaluar_lote_rubrica(
                 system_experto=system_experto,
@@ -1685,19 +1712,16 @@ def analizar_documento(
         if faltan:
             por_codigo = {it["codigo"]: it for it in items}
             lote_retry = [por_codigo[c] for c in faltan if c in por_codigo]
-            for i in range(0, len(lote_retry), _RUBRICA_LOTE_TAM):
-                sub = lote_retry[i : i + _RUBRICA_LOTE_TAM]
+            lotes_retry = _partir_en_lotes(lote_retry, tam_lote)
+            for idx, sub in enumerate(lotes_retry, start=1):
                 parcial = _evaluar_lote_rubrica(
                     system_experto=system_experto,
                     nombre_doc=nombre_doc,
                     tipo_contrato_label=tipo_contrato_label,
                     nom=nom,
                     lote=sub,
-                    lote_idx=i // _RUBRICA_LOTE_TAM + 1,
-                    total_lotes=max(
-                        1,
-                        (len(lote_retry) + _RUBRICA_LOTE_TAM - 1) // _RUBRICA_LOTE_TAM,
-                    ),
+                    lote_idx=idx,
+                    total_lotes=len(lotes_retry),
                     texto_doc=extractor.texto_para_lote([it["texto"] for it in sub]),
                     calendario=calendario,
                 )
