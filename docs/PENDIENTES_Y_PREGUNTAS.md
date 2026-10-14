@@ -46,7 +46,7 @@ Por decidir:
 - [ ] Fijar la regla del día de recepción en el calendario (pregunta 1.2).
 - [ ] Preguntas dependientes como condicionales (etiqueta en el cuestionario).
 - [ ] Reemplazar un documento cuando se vuelve a subir el mismo tipo (hoy se acumulan los dos).
-- [ ] Actualizar el modelo en `.env.example` (`gemini-2.0-flash` → el vigente) y verificar el modelo de Vertex en producción (`google/gemini-2.5-flash`, soporte de `reasoning_effort`).
+- [x] Modelo vigente: `gemini-3.8-flash` (local) y `google/gemini-3.8-flash` en Vertex `global` (14/10: acta en 45 s frente a 153 s con 2.5-flash). `.env.example` actualizado; `VERTEX_LOCATION=global` soportado; identidad con 8192 tokens (antes se cortaba en 4096).
 - [ ] Completar la LCP y el RLCP en `basamento-legal`.
 - [ ] Tokens (D2): extractos también en documentos medianos, revisar el bloque de basamento por lote.
 - [ ] Contratación Directa: cuestionarios en el formato nuevo (cuando Nancy los tenga).

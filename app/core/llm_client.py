@@ -117,6 +117,9 @@ _TEMPERATURA_RUBRICA = float(os.getenv("LLM_TEMPERATURE_RUBRICA", "0.2"))
 _REASONING_RUBRICA = (os.getenv("LLM_REASONING_EFFORT_RUBRICA", "low") or "").strip() or None
 _MAX_TOKENS_RUBRICA = int(os.getenv("LLM_MAX_TOKENS_RUBRICA", "8192"))
 _REASONING_EFFORT_OK = True
+# Llamada de identidad (resumen, coherencia, hechos): con 4096 se cortaba el
+# JSON (finish_reason=length) y había que repararlo; el razonamiento consume cupo.
+_MAX_TOKENS_IDENTIDAD = int(os.getenv("LLM_MAX_TOKENS_IDENTIDAD", "8192"))
 # Preguntas condicionales («Si la contratación…», «En caso de…»): son las únicas
 # en las que el modelo puede responder N/A (la condición no se da en el caso).
 _ITEM_CONDICIONAL_RE = re.compile(
@@ -197,13 +200,20 @@ def _vertex_base_url() -> str:
         os.getenv("GCP_PROJECT_ID") or os.getenv("GOOGLE_CLOUD_PROJECT") or ""
     ).strip()
     location = (os.getenv("VERTEX_LOCATION") or "us-east4").strip()
+    # «global» no lleva prefijo de región en el host (modelos solo globales,
+    # p. ej. gemini-3.8-flash).
+    host = (
+        "aiplatform.googleapis.com"
+        if location == "global"
+        else f"{location}-aiplatform.googleapis.com"
+    )
     if not project:
         raise RuntimeError(
             "LLM_PROVIDER=vertex requiere GCP_PROJECT_ID (o GOOGLE_CLOUD_PROJECT), "
             "o bien GEMINI_BASE_URL con el endpoint Vertex completo."
         )
     return (
-        f"https://{location}-aiplatform.googleapis.com/v1/"
+        f"https://{host}/v1/"
         f"projects/{project}/locations/{location}/endpoints/openapi"
     )
 
@@ -1543,7 +1553,7 @@ def analizar_documento(
                 f"Nomenclatura sesión: {nom}. Tipo contrato: {tipo_contrato_label}."
             )
             user_map = f"Bloque {i}/{len(chunks)}:\n\n{chunk}"
-            raw_p = _llamar_modelo(system=system_map, user_content=user_map, max_tokens=4096)
+            raw_p = _llamar_modelo(system=system_map, user_content=user_map, max_tokens=_MAX_TOKENS_IDENTIDAD)
             try:
                 parciales.append(_limpiar_y_parsear_json(raw_p))
             except (json.JSONDecodeError, TypeError, ValueError):
@@ -1557,7 +1567,7 @@ def analizar_documento(
     else:
         user = _user_contenido_documento(contenido, chunks)
 
-    raw = _llamar_modelo(system=system_base, user_content=user, max_tokens=4096)
+    raw = _llamar_modelo(system=system_base, user_content=user, max_tokens=_MAX_TOKENS_IDENTIDAD)
     try:
         data = _parsear_json_analisis(raw)
     except (json.JSONDecodeError, TypeError, ValueError):
@@ -1570,7 +1580,7 @@ def analizar_documento(
         )
         try:
             raw2 = _llamar_modelo(
-                system=system_base, user_content=correccion, max_tokens=4096
+                system=system_base, user_content=correccion, max_tokens=_MAX_TOKENS_IDENTIDAD
             )
             data = _parsear_json_analisis(raw2)
         except (json.JSONDecodeError, TypeError, ValueError) as exc:

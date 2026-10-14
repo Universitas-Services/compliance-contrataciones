@@ -115,6 +115,9 @@ def existe_cuestionario(modalidad: Modalidad, tipo: TipoDocumento) -> bool:
 
 def _limpiar(txt: str) -> str:
     t = re.sub(r"\s+", " ", txt or "").strip()
+    # Los .md traen «( incumplimiento …)»: normalizar el paréntesis en origen.
+    t = re.sub(r"\(\s+", "(", t)
+    t = re.sub(r"\s+\)", ")", t)
     return t.strip("*").strip().rstrip("\\").strip()
 
 
