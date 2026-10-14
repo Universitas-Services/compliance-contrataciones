@@ -44,8 +44,8 @@ Por decidir:
 
 - [ ] Recortar el entregable según la respuesta del equipo legal (pregunta 1.1) y de Nest (3.1).
 - [ ] Fijar la regla del día de recepción en el calendario (pregunta 1.2).
-- [ ] Preguntas dependientes como condicionales (etiqueta en el cuestionario).
-- [ ] Reemplazar un documento cuando se vuelve a subir el mismo tipo (hoy se acumulan los dos).
+- [x] Preguntas dependientes como condicionales: etiqueta `**CONDICIONAL:**` (CAAUIR.14, CAAUIR.20 y CAAUIR.27, esta última por su «de ser el caso»). Por consultar a Nancy: ¿CAAUIR.18 (declaratoria de desierta) aplica siempre o solo si el concurso quedó desierto?
+- [x] Reemplazar un documento al volver a subir el mismo archivo (mismo tipo y nombre). Ofertas o notificaciones con nombres distintos se conservan.
 - [x] Modelo vigente: `gemini-3.8-flash` (local) y `google/gemini-3.8-flash` en Vertex `global` (14/10: acta en 45 s frente a 153 s con 2.5-flash). `.env.example` actualizado; `VERTEX_LOCATION=global` soportado; identidad con 8192 tokens (antes se cortaba en 4096).
 - [ ] Completar la LCP y el RLCP en `basamento-legal`.
 - [ ] Tokens (D2): extractos también en documentos medianos, revisar el bloque de basamento por lote.

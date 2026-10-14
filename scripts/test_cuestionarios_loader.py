@@ -39,8 +39,9 @@ _MD = """**CUESTIONARIO AUDITORÍA ACTA DE INICIO**
 **CAAUC.** 26 ¿El contrato determinó de manera expresa la fecha de terminación de la obra?
 **Respuesta: SI; NO; N/A**
 **APLICA_A:** Obras; Servicios
+**CONDICIONAL:** Solo si hubo prórroga ( ver CAAUC.25 ).
 **Rango de Criticidad: RELEVANTE: 3**
-**Acción Legal:** Corrección del contrato.
+**Acción Legal:** Corrección del contrato. ( incumplimiento del Art. 5 SUNAI).
 **Advertencia a la Gerencia:** Impide medir el retraso.
 
 **CAAUC.** 27 ¿El contrato determinó de manera expresa la fecha de entrega de bienes?
@@ -73,7 +74,25 @@ def test_parser_formato_detallado() -> None:
     assert items["CAAUC.26"].aplica_a == frozenset({"OBRAS", "SERVICIOS"})
     assert items["CAAUC.26"].rango_criticidad == "RELEVANTE: 3"
     assert items["CAAUC.27"].aplica_a is None
+
+    # CONDICIONAL explícito: se lee, se retira del bloque y normaliza «( ».
+    i26 = items["CAAUC.26"]
+    assert i26.condicion == "Solo si hubo prórroga (ver CAAUC.25).", i26.condicion
+    assert i26.accion_legal == "Corrección del contrato. (incumplimiento del Art. 5 SUNAI).", i26
+    assert items["CAAUAI.14"].condicion is None
     print("OK parser formato detallado")
+
+
+def test_item_condicional() -> None:
+    from app.core.llm_client import _es_item_condicional, _formato_lote_items
+
+    assert _es_item_condicional({"texto": "Si la contratación fue plurianual, ¿…?"})
+    assert not _es_item_condicional({"texto": "¿Se señalaron las causales?"})
+    it = {"codigo": "CAAUIR.14", "texto": "¿Se señalaron las causales?",
+          "condicion": "Solo si se apartó de la recomendación."}
+    assert _es_item_condicional(it)
+    assert "[CONDICIONAL: Solo si se apartó de la recomendación.]" in _formato_lote_items([it])
+    print("OK ítems condicionales (etiqueta + redacción)")
 
 
 def test_particion_por_tipo() -> None:
@@ -110,5 +129,6 @@ def test_cita_corta_fundamento() -> None:
 
 if __name__ == "__main__":
     test_parser_formato_detallado()
+    test_item_condicional()
     test_particion_por_tipo()
     test_cita_corta_fundamento()

@@ -60,6 +60,12 @@ _APLICA_A_RE = re.compile(
     re.IGNORECASE | re.MULTILINE,
 )
 _TIPOS_CONTRATO = frozenset({"BIENES", "OBRAS", "SERVICIOS"})
+# Pregunta dependiente de un hecho del caso (p. ej. de la respuesta a otra):
+# «**CONDICIONAL:** Solo si el órgano se apartó de la recomendación (CAAUIR.13)».
+_CONDICIONAL_RE = re.compile(
+    r"^[ \t]*(?:\*\*)?\s*CONDICIONAL\s*\**\s*:\s*\**(?P<val>[^\n]*)\n?",
+    re.IGNORECASE | re.MULTILINE,
+)
 # Preámbulo condicional válido antes del «¿» (p. ej. «Si la contratación…,»).
 _PREAMBULO_RE = re.compile(r"[A-Za-zÁÉÍÓÚÑáéíóúñ]{2,}(?:\W+[A-Za-zÁÉÍÓÚÑáéíóúñ]+){2,}")
 _ART_RE = re.compile(
@@ -94,6 +100,9 @@ class ItemCuestionario:
     advertencia_gerencia: str | None = None
     # Tipos de contrato declarados con APLICA_A; None = sin etiqueta (heurística).
     aplica_a: frozenset[str] | None = None
+    # Condición declarada con CONDICIONAL: el Analista puede responder N/A si
+    # el caso muestra que no se da. None = solo la heurística del texto.
+    condicion: str | None = None
 
 
 @dataclass(frozen=True)
@@ -214,6 +223,12 @@ def _parse_items(markdown: str) -> list[ItemCuestionario]:
             aplica_a = _parse_aplica_a(ap_m.group("val"), codigo)
             bloque = bloque[: ap_m.start()] + bloque[ap_m.end() :]
 
+        condicion = None
+        cond_m = _CONDICIONAL_RE.search(bloque)
+        if cond_m:
+            condicion = _limpiar(cond_m.group("val")) or None
+            bloque = bloque[: cond_m.start()] + bloque[cond_m.end() :]
+
         fund = None
         # Preferir bloque detallado (texto íntegro de artículos); si no, cita corta.
         fund_m = _FUND_DETALLADO_RE.search(bloque)
@@ -247,6 +262,7 @@ def _parse_items(markdown: str) -> list[ItemCuestionario]:
             accion_legal=accion or None,
             advertencia_gerencia=adv or None,
             aplica_a=aplica_a,
+            condicion=condicion,
         )
         if codigo in seen:
             # Duplicado: conservar el que traiga más metadatos (p. ej. CDACTO.19).

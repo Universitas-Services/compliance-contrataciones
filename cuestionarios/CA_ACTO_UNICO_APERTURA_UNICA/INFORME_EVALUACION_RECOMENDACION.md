@@ -423,6 +423,7 @@
 **CAAUIR. 14** ¿Se señalaron las causales específicas por las cuales se apartó de la recomendación?   
 **respuestas: SI; NO; N/A**  
 **APLICA_A:** TODOS  
+**CONDICIONAL:** Solo si el órgano contratante se apartó de la recomendación de la Comisión (ver CAAUIR.13).  
 **Rango de Criticidad: CRÍTICO: 5**  
 **Acción Legal:**  Nulidad Absoluta del acto de selección..(incumplimiento de los art. 95 LCP;  9,18.5 LOPA y 91.1 LOCGR.)  
 **Advertencia para la Gerencia:** La falta de causales legales de rechazo produce el vicio de "falso supuesto".  
@@ -629,6 +630,7 @@
 **CAAUIR.** 20¿El informe detalló a los participantes u oferentes cuyas ofertas fueron descalificadas/ rechazadas?  
 **respuestas: SI; NO; N/A**  
 **APLICA_A:** TODOS  
+**CONDICIONAL:** Solo si hubo participantes u oferentes descalificados o con ofertas rechazadas.  
 **Rango de Criticidad: ORDINARIA: 1**  
 **Acción Legal:**  Nulidad de la recomendación por violación al debido proceso. Rechazar ofertas sin justificación legal produce la nulidad de todo el proceso.(incumplimiento de los art. 76 y 84, 95 de la LCP y Art. 22.3 del RLCP.)  
 **Advertencia para la Gerencia**: Vulnerar el derecho a saber por qué se fue rechazado genera demandas contra el ente.  
@@ -990,6 +992,7 @@
 **CAAUIR. 27** ¿Se especificó claramente en el informe de recomendación si la adjudicación se recomendaba de forma total o parcial a una empresa en particular, de ser el caso?  
 **respuestas: SI; NO; N/A**  
 **APLICA_A:** TODOS  
+**CONDICIONAL:** Solo si hubo varios renglones o lotes, o la adjudicación se recomendó de forma parcial.  
 **Rango de Criticidad: RELEVANTE: 3**  
 **Acción Legal:**  Nulidad de la recomendación por objeto indeterminado. (incumplimiento del art 109 de la  LCP.)   
 **Advertencia para la Gerencia:** Recomendar adjudicar sin definir claramente el alcance o sin probar la solvencia técnica pone en riesgo directo el patrimonio del Ente.  

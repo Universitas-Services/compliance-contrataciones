@@ -39,6 +39,11 @@ Loader: `app/agents/knowledge/cuestionarios_loader.py`.
   sin llamar al LLM. Sin etiqueta (o con un valor inválido) el tipo se
   infiere del texto de la pregunta.
 - Una condición previa al `¿` («Si la contratación…, ¿…?») se conserva.
+- `CONDICIONAL` (opcional): para preguntas que dependen de un hecho del caso
+  sin decirlo en su redacción (p. ej. de la respuesta a otra pregunta):
+  `**CONDICIONAL:** Solo si el órgano se apartó de la recomendación (ver CAAUIR.13).`
+  Solo en estas preguntas (y en las que empiezan con «Si…», «En caso de…») el
+  Analista puede responder N/A, explicando por qué la condición no se da.
 
 Validar antes de copiar al repo o subir a GCS:
 

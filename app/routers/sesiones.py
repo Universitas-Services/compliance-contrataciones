@@ -420,12 +420,31 @@ def _formatear_hechos_clave(hc: HechosClave) -> str:
     return "; ".join(partes) if partes else "(sin hechos clave)"
 
 
-def _memoria_expediente(sesion: SesionCompliance) -> str:
-    """Bloque de memoria estructurada para cross-validation en el Analista."""
+def _es_mismo_documento(d: DocumentoAnalizado, tipo: TipoDocumento, nombre: str) -> bool:
+    """Misma pieza vuelta a subir: mismo tipo y mismo nombre de archivo.
+
+    Solo el nombre distingue piezas legítimamente múltiples del mismo tipo
+    (varias ofertas, notificaciones a cada oferente).
+    """
+    return d.tipo == tipo and d.nombre_archivo.strip().lower() == nombre.strip().lower()
+
+
+def _memoria_expediente(
+    sesion: SesionCompliance,
+    *,
+    excluir: tuple[TipoDocumento, str] | None = None,
+) -> str:
+    """Bloque de memoria estructurada para cross-validation en el Analista.
+
+    `excluir` omite la versión anterior del documento que se está reemplazando:
+    no debe compararse consigo mismo.
+    """
     lineas: list[str] = ["MEMORIA DEL EXPEDIENTE (documentos con identidad correcta):"]
     hubo = False
     for d in sesion.documentos_analizados:
         if getattr(d, "tipo_coincide", True) is False:
+            continue
+        if excluir and _es_mismo_documento(d, *excluir):
             continue
         hubo = True
         hc = d.hechos_clave if isinstance(d.hechos_clave, HechosClave) else HechosClave()
@@ -643,6 +662,7 @@ async def cargar_documento(
                 "texto": it.texto,
                 "rango_criticidad": it.rango_criticidad,
                 "fundamento_legal": it.fundamento_legal,
+                "condicion": it.condicion,
             }
             for it in items_llm
         ]
@@ -678,7 +698,7 @@ async def cargar_documento(
                 tmp.write(chunk)
 
         procesado = procesar_archivo(tmp_path, nombre_seguro)
-        docs_previos = _memoria_expediente(sesion)
+        docs_previos = _memoria_expediente(sesion, excluir=(tipo, nombre_seguro))
         analisis = analizar_documento(
             tipo,
             procesado,
@@ -844,12 +864,24 @@ async def cargar_documento(
         )
         sincronizar_informe_documento(documento)
 
+        # Re-subida del mismo archivo (versión corregida o carga repetida por
+        # error): reemplaza a la anterior para no duplicar hallazgos en el dictamen.
+        previos = len(sesion.documentos_analizados)
+        sesion.documentos_analizados = [
+            d
+            for d in sesion.documentos_analizados
+            if not _es_mismo_documento(d, tipo, nombre_seguro)
+        ]
+        reemplazado = len(sesion.documentos_analizados) < previos
         sesion.documentos_analizados.append(documento)
-        # Solo marcar el slot como auditado si el archivo es del tipo declarado
-        if tipo_coincide:
-            for slot in sesion.checklist_slots:
-                if slot.tipo_documento == tipo:
-                    slot.auditado = True
+        # Slot auditado solo si queda algún archivo del tipo declarado con
+        # identidad correcta (el reemplazo puede haber quitado el único válido).
+        for slot in sesion.checklist_slots:
+            if slot.tipo_documento == tipo:
+                slot.auditado = any(
+                    d.tipo == tipo and getattr(d, "tipo_coincide", True)
+                    for d in sesion.documentos_analizados
+                )
 
         pendientes = _slots_pendientes(sesion)
         sesion.documento_en_cuestionario = None
@@ -878,6 +910,11 @@ async def cargar_documento(
             rubrica_txt = resumen_rubrica_chat(documento)
             if rubrica_txt:
                 msg += "\n\n" + rubrica_txt
+        if reemplazado:
+            msg = (
+                f"Se reemplazó la revisión anterior de «{nombre_seguro}» "
+                "(mismo archivo y tipo). " + msg
+            )
 
         session_store.guardar_sesion(sesion.id, sesion)
         return AnalisisDocumentoResponse(

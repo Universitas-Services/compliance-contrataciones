@@ -133,8 +133,11 @@ _FRASE_CORPUS_RE = re.compile(
 )
 
 
-def _es_item_condicional(texto: str) -> bool:
-    return bool(_ITEM_CONDICIONAL_RE.search(texto or ""))
+def _es_item_condicional(it: dict) -> bool:
+    """Condicional por etiqueta CONDICIONAL del cuestionario o por su redacción."""
+    if str(it.get("condicion") or "").strip():
+        return True
+    return bool(_ITEM_CONDICIONAL_RE.search(str(it.get("texto") or "")))
 
 _TIPOS_DOC_GUIA = (
     "ACTIVIDADES_PREVIAS; ACTA_INICIO; PLIEGO_CONDICIONES; CONDICIONES_CONTRATACION; "
@@ -1074,6 +1077,7 @@ def _items_cuestionario_norm(
                     "criticidad": str(it.get("rango_criticidad") or it.get("criticidad") or "").strip()
                     or None,
                     "fundamento": fund,
+                    "condicion": str(it.get("condicion") or "").strip() or None,
                 }
             )
         if out:
@@ -1093,8 +1097,9 @@ def _formato_lote_items(items: list[dict], *, fund_max: int = 220) -> str:
         linea = f"- {it['codigo']}: {it['texto']}"
         if it.get("criticidad"):
             linea += f" [{it['criticidad']}]"
-        if _es_item_condicional(it.get("texto") or ""):
-            linea += " [CONDICIONAL]"
+        if _es_item_condicional(it):
+            cond = str(it.get("condicion") or "").strip()
+            linea += f" [CONDICIONAL: {cond}]" if cond else " [CONDICIONAL]"
         fund = str(it.get("fundamento") or "").strip()
         if fund:
             if len(fund) > fund_max:
@@ -1231,7 +1236,7 @@ def _sanear_lote_rubrica(lote: list[dict], rub: list) -> list[dict]:
     condicionales = {
         str(it["codigo"]).strip().lower()
         for it in lote
-        if _es_item_condicional(str(it.get("texto") or ""))
+        if _es_item_condicional(it)
     }
     out: list[dict] = []
     seen: set[str] = set()
@@ -1334,7 +1339,8 @@ def _evaluar_lote_rubrica(
         "- parcial: lo contiene de forma incompleta.\n"
         "- no_consta: el documento no contiene la información; ref=null.\n"
         "- na: SOLO en ítems marcados [CONDICIONAL] cuando el documento muestra "
-        "que la condición no se da (p. ej. contratación no plurianual); explica "
+        "que la condición no se da (p. ej. contratación no plurianual, o la "
+        "condición indicada en [CONDICIONAL: …] no ocurrió); explica "
         "en la respuesta por qué no aplica. En los demás ítems no uses na.\n"
         "RESPUESTA:\n"
         "- respuesta ≤ 40 palabras con la evidencia concreta: dato, fecha, "
