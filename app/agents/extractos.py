@@ -41,6 +41,80 @@ _CORTE_RE = re.compile(
 )
 
 
+_REF_SECCION_RE = re.compile(r"\[S(\d+)\](?:\s*[-–]\s*\[S(\d+)\])?")
+# Línea que funciona como título: capítulo, cláusula, numeral romano, o una
+# línea corta en mayúsculas. Los numerales arábigos solo si son cortos
+# («1. Condiciones generales», no «1.8. Cuando el participante desee…»).
+_TITULO_FUERTE_RE = re.compile(
+    r"^(?:CAP[IÍ]TULO|CL[AÁ]USULA|T[IÍ]TULO|ANEXO|SECCI[OÓ]N|[IVXL]+\s*[.\-)]\s)"
+)
+_NUMERAL_RE = re.compile(r"^(?:\d{1,2}(?:\.\d{1,2})*|[A-Z])\s*[.\-)]\s")
+_MAX_ETIQUETA = 70
+
+
+def _limpiar_linea(linea: str) -> str:
+    t = re.sub(r"[*#_`]+", "", linea).split("\t")[0]
+    return re.sub(r"\s+", " ", t).strip(" :.-")
+
+
+def _es_titulo(t: str) -> bool:
+    letras = [c for c in t if c.isalpha()]
+    if len(letras) < 6 or len(t) > 90:
+        return False
+    if _TITULO_FUERTE_RE.match(t):
+        return True
+    if _NUMERAL_RE.match(t):
+        return len(t) <= 50
+    mayus = sum(c.isupper() for c in letras) / len(letras)
+    return mayus > 0.8 and len(t.split()) >= 2
+
+
+def _titulos(texto: str) -> list[tuple[int, str]]:
+    """(n.º de línea, título) de las líneas que funcionan como título."""
+    out = []
+    for i, linea in enumerate(texto.splitlines()):
+        t = _limpiar_linea(linea)
+        if t and _es_titulo(t):
+            out.append((i, t))
+    return out
+
+
+def etiquetas_secciones(secciones: list[Seccion]) -> dict[int, str]:
+    """Referencia legible de cada sección para el usuario.
+
+    - Tabla: «Tabla CRONOGRAMA DE EJECUCIÓN» (su primera celda).
+    - Sección que empieza con un título: ese título.
+    - Si no: el último título anterior, marcado «(cont.)».
+    Se ignoran los membretes que se repiten en muchas páginas.
+    """
+    por_seccion = {s.idx: _titulos(s.texto) for s in secciones if not s.fijo}
+    frecuencia = Counter(t for ts in por_seccion.values() for _, t in ts)
+    membretes = {t for t, n in frecuencia.items() if n >= 3}
+    etiquetas: dict[int, str] = {}
+    vigente: str | None = None
+    for s in secciones:
+        if s.fijo:
+            etiquetas[s.idx] = "Encabezado o pie de página"
+            continue
+        titulos = [(i, t) for i, t in por_seccion[s.idx] if t not in membretes]
+        lineas = s.texto.lstrip().splitlines()
+        if lineas and lineas[0].startswith("[tabla"):
+            celda = _limpiar_linea(lineas[1]) if len(lineas) > 1 else ""
+            base = f"Tabla {celda}" if celda else "Tabla"
+        elif titulos and titulos[0][0] <= 1:
+            base = titulos[0][1]
+        elif vigente:
+            base = f"{vigente} (cont.)"
+        else:
+            base = _limpiar_linea(s.texto.strip().splitlines()[0])
+        if titulos:
+            vigente = titulos[-1][1]
+        if len(base) > _MAX_ETIQUETA:
+            base = base[:_MAX_ETIQUETA].rsplit(" ", 1)[0] + "…"
+        etiquetas[s.idx] = base
+    return etiquetas
+
+
 @dataclass(frozen=True)
 class Seccion:
     idx: int
@@ -142,9 +216,34 @@ class ExtractorLotes:
 
     def __post_init__(self) -> None:
         self.largo = len(self.texto or "") > UMBRAL_DOC_LARGO
+        self.etiquetas: dict[int, str] = {}
         if self.largo:
             self.secciones = partir_en_secciones(self.texto)
             self.indice = _Indice(self.secciones)
+            self.etiquetas = etiquetas_secciones(self.secciones)
+
+    def referencias_legibles(self, texto: str | None) -> str | None:
+        """Cambia «[S127]» o «[S18]-[S78]» por el título de esas secciones.
+
+        Los códigos [Sx] solo existen para el modelo; el usuario y el equipo
+        legal necesitan una referencia que puedan ubicar en el documento.
+        """
+        if not texto or not self.etiquetas:
+            return texto
+
+        def nombre(n: str) -> str:
+            return f"«{self.etiquetas.get(int(n), f'sección {n}')}»"
+
+        def sub(m: re.Match) -> str:
+            if m.group(2):
+                a, b = nombre(m.group(1)), nombre(m.group(2))
+                return a if a == b else f"de {a} a {b}"
+            return nombre(m.group(1))
+
+        out = _REF_SECCION_RE.sub(sub, texto)
+        # Fusiona repeticiones seguidas de la misma referencia («A», «A»).
+        out = re.sub(r"(«[^»]+»)(?:,\s*\1)+", r"\1", out)
+        return re.sub(r"\b[Ss]ecci[oó]n\s+(«)", r"\1", out)
 
     def texto_para_lote(self, preguntas: list[str]) -> str:
         """Documento completo (corto) o extractos relevantes (largo)."""

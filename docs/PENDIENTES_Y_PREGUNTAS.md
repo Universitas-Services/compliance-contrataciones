@@ -17,7 +17,7 @@ Corrida completa del 14/10 (`revision_nancy/corrida_2026-10-14/`, configuración
      - **Hallazgo raíz:** el primer «no» crítico en la fase más temprana del expediente (orden cronológico de los 12 documentos). El 14/10 el modelo eligió CAAUAP.17, que es *parcial*; con la regla sería CAAUAI.14.
      - **Informe Final de Cierre** (12 documentos auditados) o **Parcial de Avance** (menos de 12), con la lista de revisados y faltantes.
    - Regla v1 mientras legal confirma (configurable): «si» suma el peso; «parcial» y «no consta» suman 0; N/A (por tipo o condicional) se excluye del máximo.
-2. **Evidencia legible:** los extractos del pliego e informe aparecen como `[S127]`, `[S18]-[S78]`; traducir a referencias que entienda el usuario (capítulo, punto, tabla).
+2. **[HECHO 15/10] Evidencia legible:** los extractos del pliego e informe aparecen como `[S127]`, `[S18]-[S78]`; traducir a referencias que entienda el usuario (capítulo, punto, tabla).
 3. **«No consta» dudosos del pliego** (CAAUPC.16 idioma, 73 confidencialidad, 82, 83, 84): verificar contra el texto (sin tokens) y, si son falsos, mejorar la selección de extractos.
 4. Dictamen: exagera algunos hallazgos (CAAUAP.17 «certificación sin firma», que es *parcial*, pasa a «inexistencia de disponibilidad presupuestaria» y a hallazgo raíz) y escribe «entre cinco y seis días» (pregunta 1.2). Citó «arts. 14 y 23 Normas SUNAI» (el 14 es de la LCP). Revisar con Mariana.
 

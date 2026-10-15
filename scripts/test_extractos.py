@@ -63,8 +63,30 @@ def test_lotes_parejos() -> None:
     print("OK lotes parejos de rúbrica")
 
 
+def test_referencias_legibles() -> None:
+    from app.agents.extractos import ExtractorLotes
+
+    relleno = ("Texto del pliego con condiciones generales del procedimiento. " * 20).strip()
+    doc = "\n".join([
+        "PLIEGO DE CONDICIONES", relleno,
+        "VIII. LUGAR Y FECHA DE PRESENTACIÓN DE LOS SOBRES", relleno, relleno,
+        "[tabla 2]", "CRONOGRAMA DE EJECUCIÓN\tCRONOGRAMA DE EJECUCIÓN",
+        "Disponibilidad del Pliego\t30/04/2026 al 11/05/2026", relleno,
+    ] * 3)
+    e = ExtractorLotes(doc)
+    assert e.largo
+    n_tabla = next(s.idx for s in e.secciones if s.texto.startswith("[tabla"))
+    assert e.etiquetas[n_tabla] == "Tabla CRONOGRAMA DE EJECUCIÓN", e.etiquetas[n_tabla]
+    txt = e.referencias_legibles(f"Sección [S{n_tabla}], [S{n_tabla}]")
+    assert txt == "«Tabla CRONOGRAMA DE EJECUCIÓN»", txt
+    assert "[S" not in e.referencias_legibles("[S1]-[S3]")
+    assert e.referencias_legibles(None) is None
+    print("OK referencias legibles ([Sx] → título de la sección)")
+
+
 if __name__ == "__main__":
     test_documento_corto_va_completo()
     test_documento_largo_extractos()
     test_identidad_inicio_y_final()
     test_lotes_parejos()
+    test_referencias_legibles()

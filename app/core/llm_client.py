@@ -1680,6 +1680,7 @@ def analizar_documento(
 
     # Solo ítems aplicables al tipo (sin prefill N/A en el pipeline de usuario).
     rubrica_acc: list = list(rubrica_prefill or [])
+    extractor: ExtractorLotes | None = None
     no_consta_fill = 0
     if tipo_ok and items:
         if not cuestionario_items and md_oficial and not preguntas:
@@ -1759,6 +1760,12 @@ def analizar_documento(
 
     if rubrica_acc or items:
         data["rubrica"] = _reordenar_rubrica(orden, rubrica_acc)
+        # Documentos largos: «[S127]» → título legible de la sección.
+        if extractor is not None and extractor.largo:
+            for r in data["rubrica"]:
+                if isinstance(r, dict):
+                    for campo in ("ref", "respuesta"):
+                        r[campo] = extractor.referencias_legibles(r.get(campo))
         cubiertos = len(data["rubrica"])
         total = len(orden) or cubiertos
         no_consta_n = sum(
