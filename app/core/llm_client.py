@@ -1395,6 +1395,11 @@ def _evaluar_lote_rubrica(
             "- Para días hábiles, días de la semana o feriados usa SOLO el "
             "CALENDARIO DEL DOCUMENTO (no cuentes de memoria) y cita en la "
             "respuesta el conteo obtenido.\n"
+            "- Plazo mínimo entre la disponibilidad del pliego (o la invitación) "
+            "y el acto: cuenta desde el día hábil SIGUIENTE a la disponibilidad "
+            "hasta el día hábil ANTERIOR al acto; el día del acto NO se cuenta "
+            "(p. ej. disponible jue 30/04, acto lun 11/05 → del 04/05 al 08/05 = "
+            "5 días hábiles). Da un solo conteo, sin cifras alternativas.\n"
             if calendario
             else ""
         )
@@ -2049,6 +2054,8 @@ def consultar_juridico(
             "CALCULADOS POR EL SISTEMA»: cópialos exactos (sección 2), parte del "
             "Hallazgo Raíz indicado (sección 3) y elige reposición o nulidad según "
             "la fase indicada (sección 4). No recalcules ni inventes cifras. "
+            "En plazos usa el conteo de días hábiles del Analista (el día del "
+            "acto no se cuenta) y da una sola cifra, sin alternativas. "
             if resultados
             else "Criticidad 5/3/1; Flag de Nulidad Absoluta solo si hay un "
             "crítico 5 con estado no. "
@@ -2110,6 +2117,9 @@ def consultar_juridico(
         if not (extra or "").strip():
             break
         texto = _empalmar_dictamen(texto, extra)
+    # Encabezado oficial (Final/Parcial) aunque el modelo empiece en la sección 1.
+    if not (texto or "").lstrip().startswith("# "):
+        texto = f"# {titulo}\n\n{(texto or '').lstrip()}"
     return texto
 
 
