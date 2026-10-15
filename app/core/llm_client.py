@@ -1911,8 +1911,13 @@ def consultar_juridico(
     documento_ids: list[str] | None = None,
     slots_pendientes: list[str] | None = None,
     alcance: str = "PARCIAL",
+    resultados: str = "",
 ) -> str:
-    """Dictamen jurídico narrativo (markdown)."""
+    """Dictamen jurídico narrativo (markdown).
+
+    `resultados`: bloque con puntajes, flag, hallazgo raíz y fase calculados
+    por código (`app/agents/puntaje.py`); el modelo los copia, no los calcula.
+    """
     from app.agents.knowledge import (
         etiqueta_documento,
         etiqueta_modalidad,
@@ -2037,9 +2042,18 @@ def consultar_juridico(
         "Sección 4: 1 párrafo de conclusión + 1 párrafo de medidas (paralización/"
         "subsanación/responsables). "
         "Prosa continua; no copies el texto de las preguntas; cita solo códigos "
-        "y artículos. Criticidad 5/3/1; Flag de Nulidad Absoluta solo si hay un "
-        "crítico 5 con estado no/parcial. "
-        "Cada hallazgo trae 'estado' y 'evidencia' (lo que el Analista vio en el "
+        "y artículos. "
+        + (
+            "Puntajes, rangos, Flag de Nulidad Absoluta, Hallazgo Raíz y fase del "
+            "procedimiento vienen YA CALCULADOS en «RESULTADOS CUANTITATIVOS "
+            "CALCULADOS POR EL SISTEMA»: cópialos exactos (sección 2), parte del "
+            "Hallazgo Raíz indicado (sección 3) y elige reposición o nulidad según "
+            "la fase indicada (sección 4). No recalcules ni inventes cifras. "
+            if resultados
+            else "Criticidad 5/3/1; Flag de Nulidad Absoluta solo si hay un "
+            "crítico 5 con estado no. "
+        )
+        + "Cada hallazgo trae 'estado' y 'evidencia'(lo que el Analista vio en el "
         "documento): estado no/parcial = incumplimiento demostrado; no_consta = "
         "no consta en ESE documento y puede constar en otra pieza: crúzalo con "
         "los demás documentos y sus 'conformes' antes de imputarlo. "
@@ -2052,7 +2066,8 @@ def consultar_juridico(
         f"Expediente {sesion.nomenclatura} — {mod_txt} — {tipo_txt}.\n"
         f"Checklist:\n{checklist_txt}\n"
         f"Pendientes: {slots_pendientes or []}\n\n"
-        f"Hallazgos del Analista (compacto):\n"
+        + (f"{resultados}\n\n" if resultados else "")
+        + "Hallazgos del Analista (compacto):\n"
         f"{json.dumps(paquetes, ensure_ascii=False)}\n\n"
         f"Resumen expediente:\n{expediente_txt}"
     )

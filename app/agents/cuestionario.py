@@ -303,6 +303,8 @@ def construir_json_analista(
         out["conformes"] = [
             {
                 "codigo_pregunta": (p.codigo_pregunta or p.id or "").strip(),
+                # Peso para el puntaje sin consultar el cuestionario (JSON autónomo).
+                "rango_criticidad": p.rango_criticidad,
                 "respuesta": p.respuesta,
                 "evidencia": p.ref,
             }

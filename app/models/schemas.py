@@ -262,6 +262,8 @@ class DictamenJuridico(BaseModel):
     mensaje_usuario: str = ""
     markdown: str = ""
     slots_pendientes: list[TipoDocumento] = Field(default_factory=list)
+    # Puntaje calculado por código (por documento, global, flag, hallazgo raíz).
+    puntaje: dict | None = None
 
 
 class SesionCompliance(BaseModel):

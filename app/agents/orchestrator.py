@@ -12,6 +12,7 @@ from app.agents.knowledge import (
     etiqueta_tipo_contratacion,
 )
 from app.agents.modalities import get_agente, get_modalidad_agent
+from app.agents.puntaje import bloque_resultados, puntaje_de_documentos
 from app.core import session_store
 from app.core.llm_client import (
     chat_compliance,
@@ -398,6 +399,16 @@ def ejecutar_dictamen_juridico(
     else:
         alcance = AlcanceDictamen.PARCIAL
 
+    # Puntajes, flag, hallazgo raíz y fase: los calcula el código; el Jurídico
+    # solo los copia e interpreta.
+    puntaje, etiquetas = puntaje_de_documentos(
+        docs,
+        modalidad=sesion.modalidad,
+        checklist_slots=sesion.checklist_slots,
+        # Con forzar_final el usuario pide el cierre: sin faltantes en el bloque.
+        pendientes=[] if alcance == AlcanceDictamen.FINAL else pendientes,
+    )
+
     juridico = get_agente(sesion.modalidad, sesion.tipo_contratacion, RolAgente.JURIDICO)
     markdown = consultar_juridico(
         sesion,
@@ -406,6 +417,7 @@ def ejecutar_dictamen_juridico(
         documento_ids=[d.id for d in docs] if documento_ids else None,
         slots_pendientes=[p.value for p in pendientes],
         alcance=alcance.value,
+        resultados=bloque_resultados(puntaje, etiquetas=etiquetas),
     )
 
     dictamen = DictamenJuridico(
@@ -416,6 +428,7 @@ def ejecutar_dictamen_juridico(
         mensaje_usuario=mensaje,
         markdown=markdown,
         slots_pendientes=list(pendientes),
+        puntaje=puntaje.a_dict(),
     )
     sesion.dictamenes_juridicos.append(dictamen)
     etiqueta = "final" if alcance == AlcanceDictamen.FINAL else "parcial"
