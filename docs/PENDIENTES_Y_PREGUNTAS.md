@@ -18,7 +18,7 @@ Corrida completa del 14/10 (`revision_nancy/corrida_2026-10-14/`, configuración
      - **Informe Final de Cierre** (12 documentos auditados) o **Parcial de Avance** (menos de 12), con la lista de revisados y faltantes.
    - Regla v1 mientras legal confirma (configurable): «si» suma el peso; «parcial» y «no consta» suman 0; N/A (por tipo o condicional) se excluye del máximo.
 2. **[HECHO 15/10] Evidencia legible:** los extractos del pliego e informe aparecen como `[S127]`, `[S18]-[S78]`; traducir a referencias que entienda el usuario (capítulo, punto, tabla).
-3. **«No consta» dudosos del pliego** (CAAUPC.16 idioma, 73 confidencialidad, 82, 83, 84): verificar contra el texto (sin tokens) y, si son falsos, mejorar la selección de extractos.
+3. **[HECHO 15/10] «No consta» dudosos del pliego** — revisados contra el texto: solo CAAUPC.16 (idioma, en «2. Carta Oferta») era falso; 73, 82, 83 y 84 no aparecen en el pliego (reales). Corregido: ancla de la palabra más rara de la pregunta y el cronograma siempre en preguntas de plazos. (CAAUPC.16 idioma, 73 confidencialidad, 82, 83, 84): verificar contra el texto (sin tokens) y, si son falsos, mejorar la selección de extractos.
 4. Dictamen: exagera algunos hallazgos (CAAUAP.17 «certificación sin firma», que es *parcial*, pasa a «inexistencia de disponibilidad presupuestaria» y a hallazgo raíz) y escribe «entre cinco y seis días» (pregunta 1.2). Citó «arts. 14 y 23 Normas SUNAI» (el 14 es de la LCP). Revisar con Mariana.
 
 ## 1. Equipo legal (Mariana y equipo)

@@ -33,6 +33,8 @@ _STOP = frozenset(
 # Preguntas de plazos/fechas: se añaden las secciones con fechas o tablas.
 _PLAZOS_RE = re.compile(r"plazo|lapso|fecha|cronograma|d[ií]as?\s+h[aá]biles|vigencia", re.I)
 _FECHA_RE = re.compile(r"\b\d{1,2}[/\-.]\d{1,2}[/\-.]\d{2,4}\b")
+# Fecha de calendario (dd/mm/aaaa): no confunde partidas como «4.02.10.05».
+_FECHA_ESTRICTA_RE = re.compile(r"\b\d{1,2}/\d{1,2}/(?:19|20)\d{2}\b")
 # Cortes naturales: títulos Markdown, cláusulas y numerales al inicio de línea.
 _CORTE_RE = re.compile(
     r"\n(?=(?:##\s|\[tabla|\[encabezado|\[pie|CL[AÁ]USULA|CAP[IÍ]TULO|ART[IÍ]CULO|"
@@ -207,6 +209,23 @@ class _Indice:
             out.append((s, i))
         return sorted(out, reverse=True)
 
+    def ancla(self, consulta: str) -> int | None:
+        """Sección con más apariciones del término más raro de la consulta.
+
+        Solo si ese término es realmente escaso (en 1 o 2 secciones): ahí
+        suele estar la respuesta («idioma», «confidencialidad», «penalización»).
+        """
+        # Sin números: «25» (artículo) o «7» (días) aparecen en cualquier tabla.
+        presentes = [
+            t for t in set(_terminos(consulta)) if self.df.get(t) and not t.isdigit()
+        ]
+        if not presentes:
+            return None
+        raro = min(presentes, key=lambda t: (self.df[t], t))
+        if self.df[raro] > 2:
+            return None
+        return max(range(self.n), key=lambda i: (self.tf[i].get(raro, 0), -i))
+
 
 @dataclass
 class ExtractorLotes:
@@ -221,6 +240,14 @@ class ExtractorLotes:
             self.secciones = partir_en_secciones(self.texto)
             self.indice = _Indice(self.secciones)
             self.etiquetas = etiquetas_secciones(self.secciones)
+            # Sección con más fechas (el cronograma): va en toda pregunta de plazos.
+            fechas = [
+                len(_FECHA_ESTRICTA_RE.findall(s.texto))
+                + (10 if re.search(r"cronograma", s.texto, re.I) else 0)
+                for s in self.secciones
+            ]
+            mejor = max(range(len(fechas)), key=lambda i: fechas[i], default=None)
+            self.cronograma = mejor if mejor is not None and fechas[mejor] >= 13 else None
 
     def referencias_legibles(self, texto: str | None) -> str | None:
         """Cambia «[S127]» o «[S18]-[S78]» por el título de esas secciones.
@@ -273,7 +300,15 @@ class ExtractorLotes:
         for q in preguntas:
             ranking = [i for s, i in self.indice.puntuar(q) if s > 0]
             cands = ranking[:_TOP_POR_PREGUNTA]
-            if _PLAZOS_RE.search(q):
+            # Si las mejores secciones no contienen la palabra más rara de la
+            # pregunta («idioma»), la sección donde sí aparece va primero.
+            ancla = self.indice.ancla(q)
+            if ancla is not None and ancla not in cands:
+                cands = [ancla] + cands[: _TOP_POR_PREGUNTA - 1]
+            if _PLAZOS_RE.search(q) and self.cronograma is not None:
+                if self.cronograma not in cands:
+                    cands.insert(1, self.cronograma)
+            elif _PLAZOS_RE.search(q):
                 extra = next(
                     (
                         i
@@ -284,12 +319,14 @@ class ExtractorLotes:
                     None,
                 )
                 if extra is not None:
-                    cands.append(extra)
+                    # Fechas o tablas (cronograma): segunda prioridad, antes
+                    # que las demás candidatas, para que el tope no las deje fuera.
+                    cands.insert(1, extra)
             por_pregunta.append(cands)
         # Reparto por rondas: primero la mejor sección de CADA pregunta, luego
         # la segunda… así ninguna pregunta se queda sin su sección principal.
         total = sum(len(self.secciones[i].texto) for i in elegidas)
-        for ronda in range(_TOP_POR_PREGUNTA + 1):
+        for ronda in range(max((len(c) for c in por_pregunta), default=0)):
             for cands in por_pregunta:
                 if ronda >= len(cands) or cands[ronda] in elegidas:
                     continue
