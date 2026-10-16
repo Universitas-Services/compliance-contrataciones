@@ -139,6 +139,10 @@
       <input id="archivo" type="file" accept=".pdf,.docx,.doc,.png,.jpg,.jpeg,.txt,.md" />
       <button id="btnAnalizar">Analizar (Analista)</button>
       <button id="btnJuridico" class="secondary" disabled>Dictamen Jurídico</button>
+      <button id="btnNuevoExp" type="button" class="secondary">Nuevo expediente</button>
+      <p style="font-size:0.8rem;margin-top:0.6rem">
+        Expediente: <b id="expInfo">— (se crea con el primer documento)</b>
+      </p>
       <div class="status" id="status"></div>
       <p style="font-size:0.75rem;color:var(--muted);margin-top:1rem">
         Ítems del tipo: <b id="nEval">—</b> · Excluidos otro tipo: <b id="nExcl">—</b>
@@ -222,6 +226,8 @@
       fd.append("modalidad", $("modalidad").value);
       fd.append("tipo_contratacion", $("tipoContrato").value);
       fd.append("tipo_documento", $("tipoDocumento").value);
+      // Mismo expediente: los documentos se acumulan para el dictamen.
+      if (lastSesionId) fd.append("sesion_id", lastSesionId);
 
       $("btnAnalizar").disabled = true;
       $("btnJuridico").disabled = true;
@@ -239,7 +245,11 @@
         if (!res.ok) throw new Error(data.detail ? JSON.stringify(data.detail) : text.slice(0, 400));
 
         lastPayload = data;
+        const previa = lastSesionId;
         lastSesionId = data.sesion && data.sesion.id;
+        const docs = (data.sesion && data.sesion.documentos_analizados) || [];
+        $("expInfo").textContent = docs.length + " documento(s) · sesión " + String(lastSesionId).slice(0, 8)
+          + (previa && previa !== lastSesionId ? " (nueva: cambió la modalidad o el tipo)" : "");
         const est = (data.documento && data.documento.estatus_global) || "—";
         $("estatusDoc").innerHTML = '<span class="badge ' + est + '">' + est + "</span>";
         $("nEval").textContent = data.items_evaluados;
@@ -270,6 +280,14 @@
       } finally {
         $("btnAnalizar").disabled = false;
       }
+    });
+
+    $("btnNuevoExp").addEventListener("click", () => {
+      lastSesionId = null;
+      lastPayload = null;
+      $("btnJuridico").disabled = true;
+      $("expInfo").textContent = "— (se crea con el primer documento)";
+      setStatus("Nuevo expediente: el próximo documento abre una sesión nueva.", "ok");
     });
 
     $("btnJuridico").addEventListener("click", async () => {

@@ -539,8 +539,14 @@ async def sandbox_analizar(
     modalidad: Modalidad = Form(...),
     tipo_contratacion: TipoContratacion = Form(...),
     tipo_documento: TipoDocumento = Form(...),
+    sesion_id: str | None = Form(default=None),
 ) -> SandboxAnalizarResponse:
-    """Flujo consolidado para el sandbox HTML: crea sesión + analiza documento."""
+    """Flujo consolidado para el sandbox HTML: analiza un documento.
+
+    Con `sesion_id` de una sesión existente (misma modalidad y tipo de
+    contrato) el documento se agrega a ese expediente, para que el dictamen
+    evalúe todas las piezas; sin él se crea una sesión nueva.
+    """
     cuest_prev = cargar_cuestionario(modalidad, tipo_documento)
     n_excluidos = 0
     n_aplicables = 0
@@ -551,11 +557,19 @@ async def sandbox_analizar(
         n_aplicables = len(aplic)
         n_excluidos = len(excl)
 
-    sesion, _msg = crear_sesion(
-        nomenclatura=nomenclatura.strip(),
-        modalidad=modalidad,
-        tipo_contratacion=tipo_contratacion,
-    )
+    previa = session_store.get_sesion(sesion_id) if sesion_id else None
+    if (
+        previa is not None
+        and previa.modalidad == modalidad
+        and previa.tipo_contratacion == tipo_contratacion
+    ):
+        sesion = previa
+    else:
+        sesion, _msg = crear_sesion(
+            nomenclatura=nomenclatura.strip(),
+            modalidad=modalidad,
+            tipo_contratacion=tipo_contratacion,
+        )
     analisis_resp = await cargar_documento(
         sesion.id,
         archivo=archivo,
