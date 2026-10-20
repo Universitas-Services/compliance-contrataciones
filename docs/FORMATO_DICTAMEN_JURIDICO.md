@@ -6,7 +6,7 @@ Decisiones asociadas (13/10/2026):
 - El dictamen llega a Nest como **Markdown en texto plano**; Nest genera el PDF solo al emitir el dictamen jurídico.
 - **Sin tablas**: la matriz por documento se presenta en **listas** (el formato oficial no exige tablas).
 - El Jurídico trabaja a partir del JSON de cada documento subido (`json_analista`). Si el expediente está incompleto, el dictamen es «Parcial de Avance» y solo habla de lo auditado (sin plantilla con huecos).
-- Pendiente (José): dónde se guardan los JSON por documento (BD de la app o del agente).
+- Decidido (15/10): los JSON por documento los guarda Nest; el agente no tiene BD. Falta el endpoint del Jurídico sin estado (ver `PENDIENTES_Y_PREGUNTAS.md` §2).
 
 ---
 

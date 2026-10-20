@@ -1,12 +1,22 @@
 # Pendientes, decisiones y preguntas abiertas
 
-Actualizado: 15/10/2026. Estado: **éxito parcial**. El Analista evalúa los 12 documentos de CA Acto Único Apertura Única y el Jurídico redacta el dictamen (formato de Mariana) a partir del JSON de cada documento. El equipo legal validó el contenido del dictamen; falta cerrar formato, puntajes, persistencia y despliegue definitivo.
+Actualizado: 16/10/2026. Estado: **éxito parcial**. El Analista evalúa los 12 documentos de CA Acto Único Apertura Única y el Jurídico redacta el dictamen (formato de Mariana) a partir del JSON de cada documento. El equipo legal validó el contenido del dictamen; falta cerrar formato, puntajes, persistencia y despliegue definitivo.
 
-## 0. Plan de hoy (15/10)
+## 0. Estado al 16/10 y plan de hoy
+
+**Hoy (16/10):** prueba completa en Cloud Run (revisión 00013) desde el sandbox: los 12 documentos de CA Acto Único Apertura Única + dictamen jurídico. Revisar: puntajes del dictamen = cálculo del código, plazos en 5 días, CAAUPC.16 (idioma) ya no «no consta», evidencia legible, hallazgo raíz CAAUAI.14, nulidad por haber adjudicación. Si sale bien → enviar a Mariana (punto 4).
+
+**Hecho el 15/10** (commits `7bb230f`, `e978e61`, `b452f1d`, `e4037d9`; desplegado en la revisión 00013):
+- Puntajes, flag, hallazgo raíz, fase e informe Parcial/Final calculados por código (`app/agents/puntaje.py`); el dictamen guarda `puntaje` (JSON para Nest). Validado con el modelo real regenerando el dictamen desde los JSON del 14/10 (`revision_nancy/corrida_2026-10-14/DICTAMEN_v2…`, `…v3…`): cifras copiadas exactas, raíz CAAUAI.14, nulidad justificada por la adjudicación.
+- Regla de días hábiles (el día del acto no cuenta) en el Analista y el Jurídico; verificado: acta y pliego dan 5 días.
+- Título oficial del dictamen («# Informe Ejecutivo Parcial de Avance / Final de Cierre»).
+- Evidencia legible y corrección de extractos (detalle en los puntos 2 y 3).
+
+### Plan del 15/10 (referencia)
 
 Corrida completa del 14/10 (`revision_nancy/corrida_2026-10-14/`, configuración de Cloud Run): 12 documentos + dictamen, 0 errores, 0 cortes, ~328.000 tokens, 10,9 min. Nota: **7/10** (Analista 8/10, Jurídico 6/10). **No enviar a Mariana hasta resolver el punto 1.**
 
-1. **[HECHO 15/10, falta validar con el modelo real] Puntajes calculados por código, no por el modelo.** Módulo `app/agents/puntaje.py`; el Jurídico recibe un bloque «RESULTADOS CUANTITATIVOS CALCULADOS POR EL SISTEMA» y el dictamen guarda `puntaje` (JSON para Nest). Regla v1: parcial = 0 (`PUNTAJE_VALOR_PARCIAL`), N/A fuera del máximo. Hoy el Jurídico calcula Máx / Obtenidos / % / rango y no cuadran con los datos. Recalculado con los pesos 5/3/1 de cada pregunta:
+1. **[HECHO 15/10, validado con el modelo real] Puntajes calculados por código, no por el modelo.** Módulo `app/agents/puntaje.py`; el Jurídico recibe un bloque «RESULTADOS CUANTITATIVOS CALCULADOS POR EL SISTEMA» y el dictamen guarda `puntaje` (JSON para Nest). Regla v1: parcial = 0 (`PUNTAJE_VALOR_PARCIAL`), N/A fuera del máximo. Hoy el Jurídico calcula Máx / Obtenidos / % / rango y no cuadran con los datos. Recalculado con los pesos 5/3/1 de cada pregunta:
    - Acta de inicio: dictamen 62 · 61,29 %; calculado 69 · 68,12 %.
    - Acta de recepción: dictamen 57,14 %; calculado 70,21 %.
    - Oferta Copikon: dictamen 13,16 %; calculado 0 %.
@@ -28,14 +38,15 @@ Validado: la información del dictamen es correcta. Observación del jefe: «55 
 Preguntas pendientes:
 1. **Extensión del entregable.** ¿El documento final va «de 5b hacia abajo»? Es decir: el dictamen (4 secciones), la cobertura del checklist, la conclusión y las recomendaciones, sin las preguntas y respuestas por documento ni las secciones 1–4 del anexo (unas 6–8 páginas).
 2. **Conteo de días hábiles.** ¿El día de recepción de ofertas cuenta dentro del plazo? Hoy el modelo a veces cuenta 6 (incluyéndolo) y a veces 5 (sin incluirlo).
-   - **Respuesta preliminar (investigación del 15/10, falta confirmar con Mariana):** **no cuenta**. El plazo empieza el día hábil siguiente a la disponibilidad del pliego y el día del acto es el vencimiento: los días mínimos deben transcurrir completos *entre* ambos. En el expediente de prueba: del 04/05 al 08/05 = **5 días** (incumple los 7). Se adopta como regla v1 en el calendario y en el prompt.
+   - **Respuesta (validada por el equipo legal, 15/10):** **no cuenta**. El plazo empieza el día hábil siguiente a la disponibilidad del pliego y el día del acto es el vencimiento: los días mínimos deben transcurrir completos *entre* ambos. En el expediente de prueba: del 04/05 al 08/05 = **5 días** (incumple los 7). Implementada el 15/10 en el Analista y el Jurídico.
 3. **Modelo de puntaje.** ¿Los puntajes 5/3/1 y los umbrales (≥95 sobresaliente, 90–94,99 aceptable, 85–89,99 significativos, <84,99 críticos) se aplican como ellos los entienden? ¿Un «parcial» suma la mitad, o cero? ¿Un «no consta» cuenta como punto perdido o se excluye del máximo? (Necesario para el punto 0.1.)
    - **Confirmado (prompt oficial del dictamen):** pesos 5/3/1, máximo = suma de las preguntas, los 4 umbrales, flag con al menos un «no» crítico, hallazgo raíz = primer crítico en la fase más temprana, informe Final (12) o Parcial (<12). El informe Parcial es correcto.
    - **Sin respuesta:** el valor de «parcial» y de «no consta». Se usa la regla v1 del punto 0.1.
-   - **Diferencia a corregir:** hoy el prompt activa el flag con «no» **o «parcial»** en un crítico; el texto oficial dice solo **«no»**.
+   - **Corregido el 15/10:** el flag lo calcula `app/agents/puntaje.py` y se activa solo con **«no»** en un crítico, como dice el texto oficial. (El semáforo del Analista por documento sigue en Rojo con «no» o «parcial» crítico: es otra métrica, la del documento, no el flag del dictamen.)
+   - «Parcial» = 0 y «no consta» = 0: regla v1 elegida por el usuario el 15/10 según la lectura literal del formato oficial («sumatoria de sus preguntas»). Falta que Mariana lo confirme explícitamente.
 4. **Nulidad frente a reposición.** ¿El criterio para recomendar nulidad absoluta (Art. 19 LOPA) en vez de reposición (Art. 98 RLCP) está bien razonado?
-   - **Respuesta preliminar (15/10, confirmar con Mariana):** depende de la fase. **Antes de la adjudicación** → reposición (Art. 98 RLCP, norma especial). **Con la adjudicación ya dictada** y un vicio insubsanable de orden público → nulidad absoluta (Art. 19 LOPA). Si el vicio impide continuar antes de adjudicar → cancelación o decaimiento del procedimiento.
-   - Aplicación: el código puede indicar al Jurídico si el expediente contiene la adjudicación. El expediente de prueba **sí la contiene**, así que la nulidad es coherente; con solo el acta de inicio corresponde reposición (como hizo el dictamen parcial del 14/10).
+   - **Respuesta (validada por el equipo legal, 15/10):** depende de la fase. **Antes de la adjudicación** → reposición (Art. 98 RLCP, norma especial). **Con la adjudicación ya dictada** y un vicio insubsanable de orden público → nulidad absoluta (Art. 19 LOPA). Si el vicio impide continuar antes de adjudicar → cancelación o decaimiento del procedimiento.
+   - Aplicación (hecha el 15/10): el código indica al Jurídico si el expediente contiene la adjudicación. El expediente de prueba **sí la contiene**, así que la nulidad es coherente; con solo el acta de inicio corresponde reposición (como hizo el dictamen parcial del 14/10).
 5. **«No consta» en un ítem crítico.** Hoy da semáforo Amarillo (Rojo solo con incumplimiento demostrado). ¿Están de acuerdo?
    - Coherente con el prompt oficial (el flag solo se activa con «no»). Se mantiene salvo que legal diga otra cosa.
 6. **Cuestionarios (Nancy):**
@@ -44,7 +55,7 @@ Preguntas pendientes:
    - Preguntas dependientes: ya marcadas con `**CONDICIONAL:**` (CAAUIR.14, 20 y 27). Consultar: ¿CAAUIR.18 (declaratoria de desierta) aplica siempre o solo si el concurso quedó desierto? **Sigue sin respuesta:** la búsqueda del 15/10 interpretó «CAAUIR.18» como una sigla del RNC (es nuestro código de pregunta), así que esa respuesta no sirve. Preguntar a Nancy o Mariana.
    - Opcional: aclarar CAAUAI.10.
    - CAAUNA.4/14 y CAANNA.4/5/17 preguntan por el recibo o acuse: ¿qué documento sube el usuario?
-     - **Respuesta preliminar (15/10):** la notificación **con el acuse de recibo** firmado y sellado por el contratista (o el comprobante de entrega si es electrónica); solo el acuse prueba la fecha desde la que corren los lapsos. Falta: indicarlo en la carga de documentos (Nest) y confirmarlo con Nancy. En el expediente de prueba se subieron oficios sin acuse; por eso esas preguntas salen «no consta».
+     - **Respuesta (validada por el equipo legal, 15/10):** la notificación **con el acuse de recibo** firmado y sellado por el contratista (o el comprobante de entrega si es electrónica); solo el acuse prueba la fecha desde la que corren los lapsos. Falta: indicarlo en la carga de documentos (Nest). En el expediente de prueba se subieron oficios sin acuse; por eso esas preguntas salen «no consta».
 7. **Legislación incompleta.** En `basamento-legal/legislacion` la LCP y el RLCP están incompletos (por ejemplo, faltan el art. 67 LCP y el art. 98 RLCP). ¿Quién facilita los textos completos?
    - **15/10:** el usuario reunirá unas 9 leyes y reformas en texto completo para cargarlas en `basamento-legal` (y en el bucket de basamento). Prioridad: LCP (Decreto 1.399, 2014) y RLCP completos.
    - **Verificar con legal:** la búsqueda menciona un «nuevo Reglamento de la LCP» (Decreto 5.364, junio de 2026). Si sustituye al RLCP de 2009 (Decreto 6.708), cambian los artículos que citan los cuestionarios (p. ej. Art. 98 RLCP).
@@ -79,7 +90,7 @@ Por decidir:
 ## 4. Técnico (nuestro lado)
 
 - [ ] Recortar el entregable según la respuesta del equipo legal (pregunta 1.1) y de Nest (3.1).
-- [ ] Fijar la regla del día de recepción en el calendario (pregunta 1.2).
+- [x] Regla del día de recepción (pregunta 1.2, validada por legal): el día del acto no se cuenta. En el Analista y el Jurídico desde el 15/10.
 - [x] Preguntas dependientes como condicionales: etiqueta `**CONDICIONAL:**` (CAAUIR.14, CAAUIR.20 y CAAUIR.27, esta última por su «de ser el caso»). Por consultar a Nancy: ¿CAAUIR.18 (declaratoria de desierta) aplica siempre o solo si el concurso quedó desierto?
 - [x] Reemplazar un documento al volver a subir el mismo archivo (mismo tipo y nombre). Ofertas o notificaciones con nombres distintos se conservan.
 - [x] Modelo vigente: `gemini-3.8-flash` (local) y `google/gemini-3.8-flash` en Vertex `global` (14/10: acta en 45 s frente a 153 s con 2.5-flash). `.env.example` actualizado; `VERTEX_LOCATION=global` soportado; identidad con 8192 tokens (antes se cortaba en 4096).
@@ -101,7 +112,7 @@ Por decidir:
    - Reiniciar o desplegar Cloud Run para que tome los `.md` nuevos (hay caché en memoria).
 4. **Variables de Cloud Run:** `LLM_PROVIDER=vertex`, `VERTEX_LOCATION=global`, `GEMINI_MODEL=google/gemini-3.8-flash` (ya sin `GEMINI_BASE_URL`), `KNOWLEDGE_SOURCE=gcs`, `GCS_BUCKET_CUESTIONARIOS`, `GCS_BUCKET_BASAMENTO`, `LLM_REASONING_EFFORT_RUBRICA=low`, `LLM_MAX_TOKENS_RUBRICA=8192`, `LLM_TEMPERATURE_RUBRICA=0.2`, `FERIADOS_EXTRA`, `LOG_LEVEL=INFO`, `MAX_UPLOAD_MB=30` (el informe de prueba pesaba 27,6 MB). Opcionales con valor por defecto en el código: `LLM_RUBRICA_LOTE_TAM=15`, `LLM_RUBRICA_LOTE_TAM_LARGO=10`, `LLM_MAX_TOKENS_IDENTIDAD=8192`.
 5. **Pruebas (14/10):** en Cloud Run se probaron el acta (40 s, 20.935 tokens con lotes de 15) y el pliego (66 s); los logs muestran la partición APLICA_A, `Rúbrica: N ítems en M lote(s)` y `finish_reason=stop` en todas las llamadas. El expediente completo se corrió en local con la configuración de Cloud Run (~328k tokens, 10,9 min); falta repetirlo en Cloud Run cuando haya sesiones persistentes (sección 2).
-6. **Estado al 14/10:** revisión `compliance-contrataciones-00012-6ss` (100 % del tráfico), `VERTEX_LOCATION=global`, `GEMINI_MODEL=google/gemini-3.8-flash`, sin `GEMINI_BASE_URL`. Rollback: revisión 00011. En el bucket quedaron por error (inofensivos) `README.md` y 5 `.gitkeep`; decidir si se borran (lo ejecuta el usuario).
+6. **Estado al 19/10:** revisión `compliance-contrataciones-00014-r2m` (100 % del tráfico, desplegada el 16/10: el sandbox acumula los documentos en el mismo expediente con `sesion_id`), `VERTEX_LOCATION=global`, `GEMINI_MODEL=google/gemini-3.8-flash`, sin `GEMINI_BASE_URL`. Rollback: revisión 00013. En el bucket quedaron por error (inofensivos) `README.md` y 5 `.gitkeep`; decidir si se borran (lo ejecuta el usuario).
 7. **Revisión del despliegue (14/10, pendiente antes de producción):**
    - Servicio público (`allUsers` + ingress `all`), protegido solo por `X-Agent-Key`: cuando Nest sea el único cliente, exigir también IAM (cuenta de servicio de Nest).
    - Concurrencia 160 por instancia con `max-instances=1`: bajarla a 10–20 (análisis de ~45 s).
@@ -109,3 +120,20 @@ Por decidir:
    - `AGENT_CLIENT_NEST_KEY` sin configurar (solo existe la clave «laravel-testing»).
    - Despliegue manual desde la PC: definir el flujo (punto 2).
 8. Recordatorio: mientras no esté la BD (sección 2), las pruebas en Cloud Run deben subir los documentos y pedir el dictamen en la misma sesión y el mismo día.
+
+## 6. Cómo arrancar el entorno local (sandbox)
+
+En PowerShell, desde la carpeta del proyecto (`compliance-contrataciones-clean`):
+
+```powershell
+.\.venv\Scripts\Activate.ps1
+python -m uvicorn app.main:app --reload --port 8000
+```
+
+- Usar `python -m uvicorn` (el comando `uvicorn` a secas no se encuentra en este PC).
+- Sandbox: http://127.0.0.1:8000/sandbox
+  - **Local:** dejar vacío «API base» (usa el `.env`: AI Studio, sin clave de agente).
+  - **Cloud Run:** «API base» = `https://compliance-contrataciones-26265028623.us-east4.run.app` y la clave `X-Agent-Key` (cliente laravel-testing). `CORS_ORIGINS` de Cloud Run ya admite `http://127.0.0.1:8000` y `http://localhost:8000`.
+- Expediente completo: recargar la página antes de empezar, subir los documentos seguidos (el contador «Expediente: N documentos» debe subir) y pedir el dictamen al final. «Nuevo expediente» empieza de cero.
+- Detener el servidor: `Ctrl + C` en la terminal.
+- Si `Activate.ps1` da error («la ejecución de scripts está deshabilitada»), no hace falta activar el entorno: `.\.venv\Scripts\python.exe -m uvicorn app.main:app --reload --port 8000`. O permitir scripts solo para tu usuario: `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned`.
