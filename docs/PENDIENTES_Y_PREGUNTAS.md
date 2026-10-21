@@ -2,9 +2,11 @@
 
 Actualizado: 16/10/2026. Estado: **éxito parcial**. El Analista evalúa los 12 documentos de CA Acto Único Apertura Única y el Jurídico redacta el dictamen (formato de Mariana) a partir del JSON de cada documento. El equipo legal validó el contenido del dictamen; falta cerrar formato, puntajes, persistencia y despliegue definitivo.
 
-## 0. Estado al 16/10 y plan de hoy
+## 0. Estado al 21/10 y plan
 
-**Hoy (16/10):** prueba completa en Cloud Run (revisión 00013) desde el sandbox: los 12 documentos de CA Acto Único Apertura Única + dictamen jurídico. Revisar: puntajes del dictamen = cálculo del código, plazos en 5 días, CAAUPC.16 (idioma) ya no «no consta», evidencia legible, hallazgo raíz CAAUAI.14, nulidad por haber adjudicación. Si sale bien → enviar a Mariana (punto 4).
+**21/10:** respuestas de Mariana y Nancy integradas en la sección 1 (CAAUIR.18, no hay reglamento nuevo, entregable sin preguntas). Sigue sin respuesta el valor de «parcial» y «no consta» (se mantiene 0). OCR con Gemini de la LCP (Decreto 1.399) y el RLCP (Decreto 6.708) en curso para completar el basamento. Vertex `global` dio muchos 429 el 20 y el 21/10: configurar un modelo de respaldo antes de producción.
+
+**Pendiente desde el 16/10:** prueba completa en Cloud Run (revisión 00013) desde el sandbox: los 12 documentos de CA Acto Único Apertura Única + dictamen jurídico. Revisar: puntajes del dictamen = cálculo del código, plazos en 5 días, CAAUPC.16 (idioma) ya no «no consta», evidencia legible, hallazgo raíz CAAUAI.14, nulidad por haber adjudicación. Si sale bien → enviar a Mariana (punto 4).
 
 **Hecho el 15/10** (commits `7bb230f`, `e978e61`, `b452f1d`, `e4037d9`; desplegado en la revisión 00013):
 - Puntajes, flag, hallazgo raíz, fase e informe Parcial/Final calculados por código (`app/agents/puntaje.py`); el dictamen guarda `puntaje` (JSON para Nest). Validado con el modelo real regenerando el dictamen desde los JSON del 14/10 (`revision_nancy/corrida_2026-10-14/DICTAMEN_v2…`, `…v3…`): cifras copiadas exactas, raíz CAAUAI.14, nulidad justificada por la adjudicación.
@@ -36,7 +38,7 @@ Corrida completa del 14/10 (`revision_nancy/corrida_2026-10-14/`, configuración
 Validado: la información del dictamen es correcta. Observación del jefe: «55 páginas es mucho, pero la información está bien».
 
 Preguntas pendientes:
-1. **Extensión del entregable.** ¿El documento final va «de 5b hacia abajo»? Es decir: el dictamen (4 secciones), la cobertura del checklist, la conclusión y las recomendaciones, sin las preguntas y respuestas por documento ni las secciones 1–4 del anexo (unas 6–8 páginas).
+1. **Extensión del entregable.** **Respondido (21/10, Mariana):** el dictamen final va **sin las preguntas**: el usuario no debe ver ninguna pregunta del cuestionario. Pendiente técnico: quitar del entregable todo lo que exponga preguntas (y confirmar si los códigos tipo «CAAUAI.14» se pueden mostrar o hay que describir el hallazgo sin código).
 2. **Conteo de días hábiles.** ¿El día de recepción de ofertas cuenta dentro del plazo? Hoy el modelo a veces cuenta 6 (incluyéndolo) y a veces 5 (sin incluirlo).
    - **Respuesta (validada por el equipo legal, 15/10):** **no cuenta**. El plazo empieza el día hábil siguiente a la disponibilidad del pliego y el día del acto es el vencimiento: los días mínimos deben transcurrir completos *entre* ambos. En el expediente de prueba: del 04/05 al 08/05 = **5 días** (incumple los 7). Implementada el 15/10 en el Analista y el Jurídico.
 3. **Modelo de puntaje.** ¿Los puntajes 5/3/1 y los umbrales (≥95 sobresaliente, 90–94,99 aceptable, 85–89,99 significativos, <84,99 críticos) se aplican como ellos los entienden? ¿Un «parcial» suma la mitad, o cero? ¿Un «no consta» cuenta como punto perdido o se excluye del máximo? (Necesario para el punto 0.1.)
@@ -50,15 +52,15 @@ Preguntas pendientes:
 5. **«No consta» en un ítem crítico.** Hoy da semáforo Amarillo (Rojo solo con incumplimiento demostrado). ¿Están de acuerdo?
    - Coherente con el prompt oficial (el flag solo se activa con «no»). Se mantiene salvo que legal diga otra cosa.
 6. **Cuestionarios (Nancy):**
-   - Validar la tabla APLICA_A (`revision_nancy/APLICA_A_CA_ACTO_UNICO_APERTURA_UNICA.xlsx`).
+   - Tabla APLICA_A (`revision_nancy/APLICA_A_CA_ACTO_UNICO_APERTURA_UNICA.xlsx`): **Nancy la ojeó y le parece bien (21/10)**, sin revisión detallada. Se mantiene la v1 y la cotejamos nosotros con la LCP y el RLCP completos.
    - Correcciones: CAAUC.40 sin criticidad; CAAUC.58 inexistente (¿fusionada con la 57?); CAAUNA.6 dice «No Adjudicación»; ACTA_INICIO usa «U.T.» frente a «UCAU»; el art. 107 menciona «Concurso Cerrado»; CAAUAI.32 está recortada; ACTIVIDADES PREVIAS dice «tres () a seis ()».
-   - Preguntas dependientes: ya marcadas con `**CONDICIONAL:**` (CAAUIR.14, 20 y 27). Consultar: ¿CAAUIR.18 (declaratoria de desierta) aplica siempre o solo si el concurso quedó desierto? **Sigue sin respuesta:** la búsqueda del 15/10 interpretó «CAAUIR.18» como una sigla del RNC (es nuestro código de pregunta), así que esa respuesta no sirve. Preguntar a Nancy o Mariana.
+   - Preguntas dependientes: marcadas con `**CONDICIONAL:**` (CAAUIR.14, 20 y 27). **CAAUIR.18 aplica en todos los casos (Mariana/Nancy, 21/10): no es condicional.**
    - Opcional: aclarar CAAUAI.10.
    - CAAUNA.4/14 y CAANNA.4/5/17 preguntan por el recibo o acuse: ¿qué documento sube el usuario?
      - **Respuesta (validada por el equipo legal, 15/10):** la notificación **con el acuse de recibo** firmado y sellado por el contratista (o el comprobante de entrega si es electrónica); solo el acuse prueba la fecha desde la que corren los lapsos. Falta: indicarlo en la carga de documentos (Nest). En el expediente de prueba se subieron oficios sin acuse; por eso esas preguntas salen «no consta».
 7. **Legislación incompleta.** En `basamento-legal/legislacion` la LCP y el RLCP están incompletos (por ejemplo, faltan el art. 67 LCP y el art. 98 RLCP). ¿Quién facilita los textos completos?
    - **15/10:** el usuario reunirá unas 9 leyes y reformas en texto completo para cargarlas en `basamento-legal` (y en el bucket de basamento). Prioridad: LCP (Decreto 1.399, 2014) y RLCP completos.
-   - **Verificar con legal:** la búsqueda menciona un «nuevo Reglamento de la LCP» (Decreto 5.364, junio de 2026). Si sustituye al RLCP de 2009 (Decreto 6.708), cambian los artículos que citan los cuestionarios (p. ej. Art. 98 RLCP).
+   - **Respondido (21/10, Nancy):** **no existe un Reglamento nuevo de 2026**; el «Decreto 5.364» que mencionó la búsqueda era un error. El vigente es el RLCP de 2009 (Decreto 6.708), que es el que se carga en el basamento. Si en el futuro sale uno nuevo, se evaluará entonces.
    - Las leyes sirven para que el agente cite con el texto exacto; lo que es criterio del equipo (puntaje, reglas del dictamen) lo sigue decidiendo legal.
 
 ## 2. Base de datos (José)
@@ -97,7 +99,7 @@ Por decidir:
 - [ ] Completar la LCP y el RLCP en `basamento-legal`.
 - [x] Tokens (D2, 14/10): medido con modelo simulado; el basamento por lote era <1 % (descartado). La caché implícita de Gemini dio `cache=0` en Vertex global (revertido el reordenamiento; queda el contador `tokens_cache`). Lotes de 15 preguntas en documentos cortos y 10 en largos (`LLM_RUBRICA_LOTE_TAM`, `LLM_RUBRICA_LOTE_TAM_LARGO`): acta −20 % tokens, expediente −6 %.
 - [x] Regla «discrepancia entre partes del documento = parcial, no si» (CAAUAI.3, CAAUPC.1).
-- [ ] Contratación Directa: cuestionarios en el formato nuevo (cuando Nancy los tenga).
+- [ ] Contratación Directa: cuestionarios en el formato nuevo. **Nancy no ha empezado (21/10)**; sin fecha.
 - [ ] Decidir qué hacer con `CONTEXTO_TRABAJO.md` (staged sin commit) y `revision_nancy/` (`.gitignore` o commit). `revision_nancy/corrida_2026-10-14/` guarda la corrida completa de referencia (informes, JSON, dictamen, `resumen.json`).
 - [ ] Opcional: script oficial en `scripts/` para correr el expediente completo con un comando (comparar versiones). Ayer se usó uno temporal fuera del repo.
 

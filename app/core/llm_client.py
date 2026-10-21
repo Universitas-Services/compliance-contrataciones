@@ -192,6 +192,10 @@ _RETRY_STATUS_CODES = {408, 429, 502, 503, 504, 520, 521, 522, 523, 524, 525}
 # Cloudflare Proxy Read Timeout ~120s; topear justo debajo.
 _TIMEOUT_PRIMARIO_TOPE = 110.0
 _REINTENTOS_PRIMARIO = 1
+# 429 (capacidad compartida saturada en Vertex «global»): reintentos con espera
+# creciente (10 s, 20 s, 40 s por defecto) antes de rendirse.
+_REINTENTOS_429 = int(os.getenv("LLM_REINTENTOS_429", "3"))
+_ESPERA_429_S = float(os.getenv("LLM_ESPERA_429_S", "10"))
 
 
 def _env_bool(name: str, default: bool = False) -> bool:
@@ -356,6 +360,12 @@ def _status_llm(exc: BaseException) -> int | None:
     if isinstance(status, int):
         return status
     return None
+
+
+def _es_429(exc: BaseException) -> bool:
+    if isinstance(exc, RateLimitError) or _status_llm(exc) == 429:
+        return True
+    return "resource_exhausted" in str(exc).lower()
 
 
 def _es_timeout_o_proxy(exc: BaseException) -> bool:
@@ -668,7 +678,9 @@ def _llamar_modelo_meta(
         APIConnectionError,
     )
     primary_exc: BaseException | None = None
-    for intento in range(1, _REINTENTOS_PRIMARIO + 1):
+    intento = 1
+    intentos_429 = 0
+    while True:
         try:
             return _chat_create(
                 _client(),
@@ -681,6 +693,19 @@ def _llamar_modelo_meta(
             )
         except _llm_errors as exc:
             primary_exc = exc
+            # 429: capacidad compartida de Gemini saturada (no es nuestra cuota):
+            # esperar con backoff suele bastar; el SDK solo reintenta segundos.
+            if _es_429(exc) and intentos_429 < _REINTENTOS_429:
+                espera = _ESPERA_429_S * (2**intentos_429)
+                intentos_429 += 1
+                logger.warning(
+                    "LLM 429; espera %ss, reintento %s/%s",
+                    espera,
+                    intentos_429,
+                    _REINTENTOS_429,
+                )
+                time.sleep(espera)
+                continue
             if intento < _REINTENTOS_PRIMARIO and _es_timeout_o_proxy(exc):
                 logger.warning(
                     "LLM primario timeout/proxy HTTP %s; reintento %s/%s",
@@ -689,6 +714,7 @@ def _llamar_modelo_meta(
                     _REINTENTOS_PRIMARIO,
                 )
                 time.sleep(1.5 * intento)
+                intento += 1
                 continue
             break
 
