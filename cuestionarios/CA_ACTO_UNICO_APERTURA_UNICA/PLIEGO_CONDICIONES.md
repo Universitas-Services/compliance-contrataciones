@@ -2079,7 +2079,7 @@
 **CAAUPC. 87\.** ¿El pliego de condiciones exigió a los oferentes (Servicios /obras) la presentación de una Estructura de Costos o Análisis de Precios Unitarios (APU) detallados, como herramienta para la verificación de precios justos y razonables, según el Art. 21 de las Normas SUNAI?  
 **RANGOS DE CRITICIDAD: RELEVANTE : 3**  
 **Respuesta: SI; NO; N/A**  
-**APLICA_A:** SERVICIOS; OBRAS  
+**APLICA_A:** TODOS  
 **ACCIÓN LEGAL:**Ajuste del Pliego. Sin APU no hay base para verificar la Ley de Precios Justos, generando responsabilidad por permitir sobreprecios (incumplimiento del Art. 21 SUNAI y 91 LOCGR)  
 **ADVERTENCIA PARA LA GERENCIA:**Permite la adjudicación con sobreprecios, incurriendo en responsabilidad administrativa personal (Art. 91 LOCGR).  
 **FUNDAMENTO LEGAL VIOLENTADO EN CASO DE NO:**  

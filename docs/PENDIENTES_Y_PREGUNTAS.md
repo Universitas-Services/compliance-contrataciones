@@ -139,3 +139,10 @@ python -m uvicorn app.main:app --reload --port 8000
 - Expediente completo: recargar la página antes de empezar, subir los documentos seguidos (el contador «Expediente: N documentos» debe subir) y pedir el dictamen al final. «Nuevo expediente» empieza de cero.
 - Detener el servidor: `Ctrl + C` en la terminal.
 - Si `Activate.ps1` da error («la ejecución de scripts está deshabilitada»), no hace falta activar el entorno: `.\.venv\Scripts\python.exe -m uvicorn app.main:app --reload --port 8000`. O permitir scripts solo para tu usuario: `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned`.
+
+## 7. Cotejo de APLICA_A con la LCP, el RLCP y las Normas SUNAI (21/10)
+
+- 64 de las 71 preguntas limitadas por tipo de contrato coinciden con la ley (umbrales art. 77 LCP; plazos de ofertas art. 67; plazos de evaluación en acto único art. 81.1; preguntas que nombran un solo tipo).
+- Ajustadas a TODOS (la ley no distingue tipo): CAAUAP.11 (presupuesto base, art. 59 LCP), CAAUIR.36 y CAAUPC.87 (estructura de costos, art. 21 SUNAI), CAAUC.64 (supervisor, arts. 136-137 LCP).
+- CAAUC.43 y CAAUC.44 (fianza laboral y retención del 5 %): TODOS + `CONDICIONAL`, porque el art. 124 LCP la hace potestativa («podrá»).
+- **Pendiente con Nancy:** CAAUC.47 (pago de facturas y valuaciones en 8 días hábiles): ese plazo no aparece en la LCP, el RLCP ni las Normas SUNAI cargadas. Se deja como está (OBRAS/SERVICIOS) hasta saber de dónde sale.

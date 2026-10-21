@@ -1091,7 +1091,8 @@
 
 **CAAUC.** 43 ¿El contrato estableció la obligación de constituir una fianza laboral equivalente al 10% del costo total del personal incluído en la estructura de costos de la oferta que presentó?  
 **Respuesta: SI; NO; N/A**  
-**APLICA_A:** SERVICIOS; OBRAS  
+**APLICA_A:** TODOS  
+**CONDICIONAL:** Solo si el pliego o el contrato exigieron fianza laboral (art. 124 LCP: es potestativa).  
 **RANGO DE CRITICIDAD: CRÍTICO 5\.**  
 **Acción Legal: Aplicación obligatoria de la retención del 5% sobre cada pago.(incumplimiento Arts. 124 LCP y 19 Normas SUNAI).**  
 **Advertencia a la Gerencia: Sin Fianza Laboral o retención del 5%, la entidad pública se vuelve "Responsable Solidaria" ante el Ministerio del Trabajo si el contratista no le paga a sus obreros, asumiendo una deuda con dinero público.**  
@@ -1115,7 +1116,8 @@
 
 **CAAUC.** 44 ¿El contrato previó el mecanismo de retención del 5% de los pagos ante la falta de constitución de la garantía laboral?  
 **Respuesta: SI; NO; N/A**  
-**APLICA_A:** SERVICIOS; OBRAS  
+**APLICA_A:** TODOS  
+**CONDICIONAL:** Solo si se exigió fianza laboral y el contratista no la constituyó (art. 124 LCP).  
 **RANGO DE CRITICIDAD: CRÍTICO 5\.**  
 **Acción Legal: Aplicación obligatoria de la retención del 5% sobre cada pago.(incumplimiento Arts. 124 LCP y 19 Normas SUNAI).**  
 **Advertencia a la Gerencia: Sin Fianza Laboral o retención del 5%, la entidad pública se vuelve "Responsable Solidaria" ante el Ministerio del Trabajo si el contratista no le paga a sus obreros, asumiendo una deuda con dinero público.**  
@@ -1631,7 +1633,7 @@
 
 **CAAUC.** 64 ¿El contrato designó formalmente a un Supervisor (o Ingeniero Inspector) con nombre y apellido, como responsable del seguimiento técnico y la validación de los pagos?  
 **Respuesta: SI; NO; N/A**  
-**APLICA_A:** SERVICIOS; OBRAS  
+**APLICA_A:** TODOS  
 **RANGO DE CRITICIDAD: CRÍTICO 5\.**  
 **Acción Legal: Nulidad de conformación de pagos por funcionarios no autorizados expresamente.(incumplimiento del Art. 136 LCP y 35 SUNAI).**   
 **ADVERTENCIA A LA GERENCIA: La supervisión genérica diluye la responsabilidad penal/administrativa en caso de obras defectuosas. El Estado exige responsables directos con nombre y cédula/RIF.**  

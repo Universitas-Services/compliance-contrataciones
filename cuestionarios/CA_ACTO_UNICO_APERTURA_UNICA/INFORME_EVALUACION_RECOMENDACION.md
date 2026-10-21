@@ -1310,7 +1310,7 @@
 
 **CAAUIR. 36** ¿El Informe de Recomendación incluyó un análisis sobre la estructura de costos de la oferta recomendada, concluyendo sobre la justicia y razonabilidad de sus precios, como lo exige el Art.21 de las Normas SUNAI?  
 **respuestas: SI; NO; N/A**  
-**APLICA_A:** SERVICIOS; OBRAS  
+**APLICA_A:** TODOS  
 **Rango de Criticidad: CRÍTICO: 5**  
 **Acción Legal:**  Nulidad Absoluta de la Recomendación por violación de orden público económico y riesgo patrimonial (incumplimiento del Art. 21 Normas SUNAI y 91.1 LOCGR).  
 **Advertencia para la Gerencia:** Omitir la validación y constancia de precios justos en el informe de recomendación permite la adjudicación con sobreprecios, generando responsabilidad administrativa directa y reparos fiscales.  

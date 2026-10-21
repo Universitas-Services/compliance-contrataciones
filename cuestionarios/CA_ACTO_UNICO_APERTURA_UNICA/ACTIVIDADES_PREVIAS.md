@@ -462,7 +462,7 @@ El acto motivado para la aplicación de la Contratación Directa, emanado de la 
 
 **CAAUAP.11** ¿El requerimiento incluyó un presupuesto base que cumplió con la estructura de costos de precios justos?  
 **Respuesta: SI; NO; N/A**  
-**APLICA_A:** SERVICIOS; OBRAS  
+**APLICA_A:** TODOS  
 **RANGO DE CRITICIDAD: RELEVANTE: 3**  
 **ACCIÓN LEGAL:**Ajuste forzoso del Presupuesto Base. (incumplimiento del Art. 21 Normas SUNAI y 91.29 LOCGR).  
 **ADVERTENCIA PARA LA GERENCIA:**  El incumplimiento de la Ley Orgánica de Precios Justos expone a la institución a sobreprecios y sanciones por daño patrimonial (Art. 91.29 LOCGR).  
