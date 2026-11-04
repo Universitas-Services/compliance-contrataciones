@@ -1324,11 +1324,7 @@ def _sanear_lote_rubrica(lote: list[dict], rub: list) -> list[dict]:
             else:
                 # Ítems del lote son aplicables: N/A del modelo = sin evidencia
                 estado = "no_consta"
-                resp = (
-                    "No consta evidencia en el documento para este ítem aplicable "
-                    "(N/A del modelo normalizado; el N/A por tipo de contrato "
-                    "solo lo asigna el sistema)."
-                )
+                resp = "No consta en el documento."
         resp = _FRASE_CORPUS_RE.sub("", resp).strip()
         if re.search(r"\bsimulado\b", resp, re.IGNORECASE):
             resp = re.sub(

@@ -146,3 +146,21 @@ python -m uvicorn app.main:app --reload --port 8000
 - Ajustadas a TODOS (la ley no distingue tipo): CAAUAP.11 (presupuesto base, art. 59 LCP), CAAUIR.36 y CAAUPC.87 (estructura de costos, art. 21 SUNAI), CAAUC.64 (supervisor, arts. 136-137 LCP).
 - CAAUC.43 y CAAUC.44 (fianza laboral y retención del 5 %): TODOS + `CONDICIONAL`, porque el art. 124 LCP la hace potestativa («podrá»).
 - **Pendiente con Nancy:** CAAUC.47 (pago de facturas y valuaciones en 8 días hábiles): ese plazo no aparece en la LCP, el RLCP ni las Normas SUNAI cargadas. Se deja como está (OBRAS/SERVICIOS) hasta saber de dónde sale.
+
+## 8. Encender y apagar la instancia fija de Cloud Run (pruebas)
+
+Con mínimo 0 (lo normal), Cloud Run se apaga tras unos 15 min sin uso y se pierden las sesiones en memoria del sandbox. Para una prueba de expediente completo, encender 1 instancia fija y apagarla al terminar (encendida cuesta ~1 USD al día).
+
+```powershell
+# Encender (antes de la prueba)
+gcloud run services update compliance-contrataciones --region us-east4 --project marine-alchemy-510716-j5 --min-instances=1
+
+# Apagar (al terminar)
+gcloud run services update compliance-contrataciones --region us-east4 --project marine-alchemy-510716-j5 --min-instances=0
+
+# Ver el estado (vacío = 0)
+gcloud run services describe compliance-contrataciones --region us-east4 --project marine-alchemy-510716-j5 --format="value(spec.template.metadata.annotations['autoscaling.knative.dev/minScale'])"
+```
+
+- Cada cambio crea una revisión nueva (mismo código) y tarda 1–5 min. La revisión nueva relee cuestionarios y basamento del bucket.
+- Desde la consola: Cloud Run → `compliance-contrataciones` → «Editar e implementar una nueva revisión» → «Ajuste de escala» → «Cantidad mínima de instancias» = 1 o 0 → «Implementar».
