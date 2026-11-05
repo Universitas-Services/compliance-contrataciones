@@ -16,6 +16,10 @@ _TEXTO_MINIMO_PAGINA = 20
 _CHUNK_CHARS = 12000  # ~ bloques densos para map-reduce
 
 
+class OCRNoDisponible(RuntimeError):
+    """El motor de OCR no carga: es un fallo del servicio, no del documento."""
+
+
 @dataclass
 class BloqueDocumento:
     id: str
@@ -46,12 +50,12 @@ def _colapsar_ws(texto: str) -> str:
 
 
 def _ocr_imagen_bytes(png_bytes: bytes) -> str:
-    """OCR local con RapidOCR; vacío si no está instalado o falla."""
+    """OCR local con RapidOCR; vacío si falla en esta imagen."""
     try:
         from rapidocr_onnxruntime import RapidOCR
-    except ImportError:
-        logger.warning("rapidocr_onnxruntime no instalado; OCR omitido")
-        return ""
+    except ImportError as exc:
+        logger.error("No se pudo cargar rapidocr_onnxruntime: %s", exc)
+        raise OCRNoDisponible(str(exc)) from exc
     try:
         engine = RapidOCR()
         # RapidOCR acepta ndarray o path; usamos temp png

@@ -15,7 +15,7 @@ Autenticación: header `X-Agent-Key`. La petición es `multipart/form-data`:
 
 | Campo | Ejemplo |
 |---|---|
-| `archivo` | el documento (máximo 25 MB) |
+| `archivo` | el documento (máximo 30 MB) |
 | `nomenclatura` | `CA-SDEDTEOEL-CA-002-2026` |
 | `modalidad` | `CA_ACTO_UNICO_APERTURA_UNICA` |
 | `tipo_contratacion` | `BIENES` |
@@ -36,7 +36,7 @@ Respuesta (200):
 
 Nest guarda `json_analista` sin modificarlo. El agente no conserva nada.
 
-Errores: los de la tabla de abajo, más 400 (archivo ilegible), 413 (demasiado grande), 415 (extensión no permitida) y 502 (respuesta incompleta del modelo; se puede reintentar).
+Errores: los de la tabla de abajo, más 400 (archivo ilegible, incluido un PDF escaneado sin texto reconocible), 413 (demasiado grande), 415 (extensión no permitida) y 502 (respuesta incompleta del modelo; se puede reintentar).
 
 ## `POST /api/dictamen`
 
@@ -115,7 +115,7 @@ Errores:
 
 - **Tiempo:** el dictamen de 12 documentos tardó 83 s en la prueba del 5/11, y puede tardar más si Gemini está saturado. El cliente necesita un tiempo de espera de al menos 5 minutos.
 - **Tamaño:** los 12 JSON de la prueba pesan unos 150 KB.
-- **Reintentos:** Nest debe reintentar los 503 respetando `Retry-After`. No significan que el documento falló.
+- **Reintentos:** Nest debe reintentar los 503 respetando `Retry-After`, y los 429 con espera creciente. Cloud Run también puede responder 429 cuando todas las instancias están llenas. Ninguno significa que el documento falló.
 - **Sin memoria entre documentos:** `POST /api/analizar` revisa cada documento por separado. Las incoherencias entre documentos quedan para el dictamen.
 - **Documentos en la casilla equivocada:** llegan con `tipo_coincide: false`, no suman al puntaje y su tipo sigue figurando como pendiente.
 

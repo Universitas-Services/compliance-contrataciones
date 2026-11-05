@@ -21,6 +21,7 @@ from app.agents.document_normalizer import (
     partir_en_chunks,
     rasterizar_pagina_pdf,
 )
+from app.core.capacidad import cupo_ocr
 
 ModoContenido = Literal["texto", "imagen", "mixto"]
 TipoArchivo = Literal["pdf", "docx", "xlsx", "imagen", "desconocido"]
@@ -91,6 +92,11 @@ def extraer_pdf_nativo(path: str) -> DocumentoCanonico | None:
 
 def extraer_pdf_ocr(path: str) -> DocumentoCanonico:
     bloques, adv, cobertura = ocr_pdf_todas_paginas(path)
+    if cobertura == 0:
+        raise ValueError(
+            "No se pudo leer el documento: es un PDF escaneado sin texto "
+            "reconocible. Sube una copia más nítida."
+        )
     meta = [
         "# meta",
         "archivo_tipo: pdf",
@@ -258,7 +264,8 @@ def procesar_archivo(path: str, filename: str) -> dict[str, Any]:
         nativo = extraer_pdf_nativo(path)
         if nativo:
             return _pack(nativo)
-        ocr = extraer_pdf_ocr(path)
+        with cupo_ocr():
+            ocr = extraer_pdf_ocr(path)
         return _pack(ocr)
 
     if tipo == "docx":
@@ -268,7 +275,8 @@ def procesar_archivo(path: str, filename: str) -> dict[str, Any]:
         return _pack(extraer_xlsx(path))
 
     if tipo == "imagen":
-        texto, adv = ocr_archivo_imagen(path)
+        with cupo_ocr():
+            texto, adv = ocr_archivo_imagen(path)
         if len(texto) >= _TEXTO_MINIMO:
             bloque = BloqueDocumento(id="b1", etiqueta="imagen", texto=texto)
             canon = DocumentoCanonico(

@@ -27,6 +27,7 @@ from app.agents.cuestionario import (
     resumen_rubrica_chat,
     sincronizar_informe_documento,
 )
+from app.agents.document_normalizer import OCRNoDisponible
 from app.agents.extractor import procesar_archivo
 from app.agents.knowledge import etiqueta_modalidad
 from app.agents.knowledge.cuestionarios_loader import (
@@ -860,6 +861,11 @@ async def _subir_y_procesar(archivo: UploadFile, procesar: Callable[[str, str], 
                         )
                     tmp.write(chunk)
             return await run_in_threadpool(procesar, tmp_path, nombre_seguro)
+    except OCRNoDisponible as exc:
+        raise HTTPException(
+            status_code=503,
+            detail="La lectura de documentos escaneados no está disponible.",
+        ) from exc
     except _LLM_ERRORS as exc:
         raise _http_from_llm(exc) from exc
     except json.JSONDecodeError as exc:

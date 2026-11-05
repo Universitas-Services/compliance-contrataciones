@@ -128,7 +128,9 @@ Por decidir:
 Objetivo: que el servicio nunca se caiga. Acepta, encola y procesa al ritmo que permita Gemini.
 
 - [x] **Fase 1, código (pendiente de commit y despliegue):** análisis en hilos, límite por instancia (`MAX_ANALISIS_CONCURRENTES`, 8 por defecto; 503 con `Retry-After`), `POST /api/analizar` sin estado y credenciales de Vertex seguras entre hilos. Prueba: `scripts/test_capacidad.py`.
-- [ ] **Fase 2, configuración de Cloud Run:** concurrencia por instancia, 30 a 50 instancias como máximo y tope de gasto.
+- [ ] **Fase 2, configuración de Cloud Run (en curso):** concurrencia 10, máximo 10 instancias y afinidad de sesión ya aplicados. Faltan la alerta de presupuesto y subir a 30–50 instancias después de la Fase 5.
+- **OCR en Cloud Run (5/11):** desde el 20/10 no funcionaba porque faltaba `libgl1` en la imagen; corregido. Con 8 escaneados a la vez la instancia superó los 2 GiB, por eso `MAX_OCR_CONCURRENTES=2`.
+- **Medición con 8 escaneados (5/11, revisión 00026):** sin caídas, memoria máxima 58 %, CPU 91 %, hasta 9 instancias. Un 429 de Gemini agotó los reintentos con casi nada de carga: es la prioridad de la Fase 4. Dos OCR de 15 páginas en una instancia tardaron de 4 a 9 minutos.
 - [ ] **Fase 3, cola:** Nest sube a GCS, Cloud Tasks procesa y un callback avisa. Hablarlo con Frank.
 - [ ] **Fase 4, Gemini:** modelo de respaldo, cuota y Provisioned Throughput.
 - [ ] **Fase 5, prueba de carga** con Gemini simulado.
