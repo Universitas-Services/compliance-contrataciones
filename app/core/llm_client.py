@@ -198,6 +198,11 @@ _REINTENTOS_PRIMARIO = 1
 # creciente (10 s, 20 s, 40 s por defecto) antes de rendirse.
 _REINTENTOS_429 = int(os.getenv("LLM_REINTENTOS_429", "3"))
 _ESPERA_429_S = float(os.getenv("LLM_ESPERA_429_S", "10"))
+# Priority PayGo de Vertex: mismo modelo, 80 % más caro; solo tras un 429.
+_HEADERS_PRIORIDAD = {
+    "X-Vertex-AI-LLM-Request-Type": "shared",
+    "X-Vertex-AI-LLM-Shared-Request-Type": "priority",
+}
 
 
 def _env_bool(name: str, default: bool = False) -> bool:
@@ -599,6 +604,7 @@ def _chat_create(
     timeout: float | None = None,
     temperature: float | None = None,
     reasoning_effort: str | None = None,
+    extra_headers: dict[str, str] | None = None,
 ) -> tuple[str, str | None]:
     global _REASONING_EFFORT_OK
     kwargs: dict = {
@@ -612,6 +618,8 @@ def _chat_create(
         kwargs["temperature"] = temperature
     if reasoning_effort and _REASONING_EFFORT_OK:
         kwargs["reasoning_effort"] = reasoning_effort
+    if extra_headers:
+        kwargs["extra_headers"] = extra_headers
     try:
         response = client.chat.completions.create(**kwargs)
     except APIStatusError as exc:
@@ -661,6 +669,10 @@ def _llamar_modelo(
     return text
 
 
+def _prioridad_429_activa() -> bool:
+    return _env_bool("LLM_PRIORIDAD_429", False) and _llm_provider() == "vertex"
+
+
 def _llamar_modelo_meta(
     *,
     system: str,
@@ -684,9 +696,10 @@ def _llamar_modelo_meta(
     primary_exc: BaseException | None = None
     intento = 1
     intentos_429 = 0
+    prioridad = False
     while True:
         try:
-            return _chat_create(
+            resultado = _chat_create(
                 _client(),
                 model=_model(),
                 messages=messages,
@@ -694,9 +707,17 @@ def _llamar_modelo_meta(
                 timeout=timeout,
                 temperature=temperature,
                 reasoning_effort=reasoning_effort,
+                extra_headers=_HEADERS_PRIORIDAD if prioridad else None,
             )
+            if prioridad:
+                logger.info("LLM respondió tras reintento con prioridad")
+            return resultado
         except _llm_errors as exc:
             primary_exc = exc
+            if _es_429(exc) and not prioridad and _prioridad_429_activa():
+                prioridad = True
+                logger.warning("LLM 429; reintento inmediato con prioridad")
+                continue
             # 429: capacidad compartida de Gemini saturada (no es nuestra cuota):
             # esperar con backoff suele bastar; el SDK solo reintenta segundos.
             if _es_429(exc) and intentos_429 < _REINTENTOS_429:
