@@ -23,9 +23,11 @@ from app.core.llm_client import (
 from app.models.schemas import (
     AlcanceDictamen,
     DictamenJuridico,
+    DocumentoAnalizado,
     EstadoSesion,
     MensajeChat,
     Modalidad,
+    PreguntaSeguimiento,
     RolAgente,
     RolMensaje,
     SesionCompliance,
@@ -452,6 +454,83 @@ def ejecutar_dictamen_juridico(
         )
     )
     return dictamen
+
+
+def _documento_desde_json(js: dict) -> DocumentoAnalizado:
+    """Reconstruye una pieza del expediente a partir de su `json_analista`."""
+    try:
+        tipo = TipoDocumento(js.get("tipo_documento"))
+    except ValueError as exc:
+        raise ValueError(
+            "Cada documento debe traer un tipo_documento válido: "
+            f"«{js.get('documento_evaluado') or 'sin nombre'}» trae "
+            f"«{js.get('tipo_documento')}»."
+        ) from exc
+
+    def pregunta(item: dict, estado: str, respuesta_clave: str = "respuesta") -> PreguntaSeguimiento:
+        codigo = str(item.get("codigo_pregunta") or "")
+        return PreguntaSeguimiento(
+            id=codigo,
+            texto=item.get("pregunta_evaluada") or codigo,
+            respondida=True,
+            respuesta=item.get(respuesta_clave),
+            estado=estado,
+            ref=item.get("evidencia"),
+            codigo_pregunta=codigo,
+            fundamento_legal=item.get("fundamento_legal"),
+            rango_criticidad=item.get("rango_criticidad"),
+        )
+
+    preguntas = (
+        [pregunta(h, h.get("estado") or "no_consta") for h in js.get("hallazgos") or []]
+        + [pregunta(c, "si") for c in js.get("conformes") or []]
+        + [pregunta(n, "na", "motivo") for n in js.get("no_aplica") or []]
+    )
+    estatus = js.get("estatus_global")
+    return DocumentoAnalizado(
+        id=str(uuid.uuid4()),
+        tipo=tipo,
+        nombre_archivo=str(js.get("documento_evaluado") or tipo.value),
+        resumen="",
+        cumple=estatus == "Verde",
+        fecha_analisis=datetime.utcnow(),
+        preguntas_seguimiento=preguntas,
+        json_analista=js,
+        tipo_coincide=bool(js.get("tipo_coincide", True)),
+        estatus_global=estatus,
+    )
+
+
+def dictamen_desde_documentos(
+    *,
+    nomenclatura: str,
+    modalidad: Modalidad,
+    tipo_contratacion: TipoContratacion,
+    documentos: list[dict],
+    mensaje: str,
+    forzar_final: bool = False,
+) -> DictamenJuridico:
+    """Dictamen sin estado: arma el expediente en memoria y no guarda nada.
+
+    Nest conserva los `json_analista`; así el dictamen no depende de la
+    instancia de Cloud Run que analizó cada documento.
+    """
+    docs = [_documento_desde_json(js) for js in documentos]
+    agent = get_modalidad_agent(modalidad, tipo_contratacion)
+    sesion = SesionCompliance(
+        id=str(uuid.uuid4()),
+        nomenclatura=nomenclatura,
+        modalidad=modalidad,
+        tipo_contratacion=tipo_contratacion,
+        estado=EstadoSesion.ACTIVA,
+        fecha_inicio=datetime.utcnow(),
+        checklist_slots=agent.obtener_checklist(),
+        documentos_analizados=docs,
+    )
+    validos = {d.tipo for d in docs if d.tipo_coincide}
+    for slot in sesion.checklist_slots:
+        slot.auditado = slot.tipo_documento in validos
+    return ejecutar_dictamen_juridico(sesion, mensaje=mensaje, forzar_final=forzar_final)
 
 
 def _procesar_respuesta_cuestionario(

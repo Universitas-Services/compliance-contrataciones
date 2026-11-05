@@ -376,6 +376,27 @@ class JuridicoRequest(BaseModel):
     forzar_final: bool = False
 
 
+class DictamenExpedienteRequest(BaseModel):
+    """Dictamen sin estado: Nest envía los `json_analista` del expediente."""
+
+    nomenclatura: str
+    modalidad: Modalidad
+    tipo_contratacion: TipoContratacion
+    documentos: list[dict] = Field(min_length=1)
+    mensaje: str = (
+        "Emite el informe ejecutivo de compliance según el formato oficial "
+        "(4 secciones)."
+    )
+    forzar_final: bool = False
+
+
+class DictamenExpedienteResponse(BaseModel):
+    alcance: AlcanceDictamen
+    markdown: str
+    puntaje: dict | None = None
+    pendientes: list[TipoDocumento] = Field(default_factory=list)
+
+
 class JuridicoResponse(BaseModel):
     sesion: SesionCompliance
     dictamen: DictamenJuridico

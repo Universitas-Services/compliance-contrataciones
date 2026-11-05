@@ -19,7 +19,7 @@ from fastapi.staticfiles import StaticFiles
 
 from app.core.gateway_auth import docs_enabled, verify_gateway
 from app.core.security import SecurityHeadersMiddleware, cors_origins
-from app.routers import sesiones
+from app.routers import dictamen, sesiones
 
 # Sin esto los logger.info de `app.*` no salen bajo uvicorn (solo WARNING+).
 logging.getLogger("app").setLevel(os.getenv("LOG_LEVEL", "INFO").upper())
@@ -67,6 +67,11 @@ app.add_middleware(SecurityHeadersMiddleware)
 
 app.include_router(
     sesiones.router,
+    prefix="/api",
+    dependencies=[Depends(verify_gateway)],
+)
+app.include_router(
+    dictamen.router,
     prefix="/api",
     dependencies=[Depends(verify_gateway)],
 )

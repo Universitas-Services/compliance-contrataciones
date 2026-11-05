@@ -836,6 +836,8 @@ async def cargar_documento(
             estatus_global=estatus_global or "Amarillo",
             hallazgos=hallazgos,
             preguntas=preg_objs,
+            tipo_documento=tipo.value,
+            tipo_coincide=tipo_coincide,
         )
         informe_usuario = (
             construir_informe_usuario_markdown(

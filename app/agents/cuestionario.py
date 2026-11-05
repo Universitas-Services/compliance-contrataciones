@@ -264,6 +264,8 @@ def construir_json_analista(
     estatus_global: str,
     hallazgos: list[HallazgoAnalista],
     preguntas: list[PreguntaSeguimiento] | None = None,
+    tipo_documento: str | None = None,
+    tipo_coincide: bool = True,
 ) -> dict:
     """Parte 2 del formato Mariana (objeto estructurado).
 
@@ -274,6 +276,9 @@ def construir_json_analista(
     """
     out: dict = {
         "documento_evaluado": nombre_documento,
+        # Autónomo: con esto Nest puede pedir el dictamen solo con estos JSON.
+        "tipo_documento": tipo_documento,
+        "tipo_coincide": tipo_coincide,
         "tipo_contrato": tipo_contrato,
         "estatus_global": estatus_global,
         "hallazgos": [

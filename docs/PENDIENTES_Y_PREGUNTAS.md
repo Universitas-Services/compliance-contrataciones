@@ -68,8 +68,8 @@ Preguntas pendientes:
 Hoy las sesiones y el JSON de cada documento viven en memoria y en `data/sesiones.json`. Funciona en local, pero **no sobrevive en Cloud Run** (reinicios, escalado, nuevos despliegues).
 
 **Decidido (15/10, con Edwards y Frank): opción A.** Los JSON de cada documento se guardan en **Nest**; el agente no tendrá base de datos propia. Consecuencias técnicas:
-- [ ] Endpoint del Jurídico **sin estado**: recibe la lista de `json_analista` del expediente (más modalidad, tipo de contrato y nomenclatura) y devuelve el dictamen, sin depender de la sesión en memoria.
-- [ ] El `json_analista` debe llevar lo que necesitan el puntaje y el dictamen: código, estado y documento (los pesos 5/3/1 se toman del cuestionario por código).
+- [x] Endpoint del Jurídico **sin estado** (5/11): `POST /api/dictamen` recibe la lista de `json_analista` y no guarda nada. Contrato para revisar con Frank en `docs/API_DICTAMEN_NEST.md`. Motivo: el 4/11 Cloud Run reinició la instancia aun con `min-instances=1` y se perdió la sesión.
+- [x] El `json_analista` ya es autónomo (5/11): lleva `tipo_documento`, `tipo_coincide`, código, estado y criticidad.
 - [ ] Archivos originales: el agente **no** necesita guardarlos (los procesa y devuelve el JSON). Si se conservan, lo decide Nest; el agente no requiere un bucket de expedientes.
 - Las sesiones en memoria quedan solo para el sandbox y las pruebas.
 
