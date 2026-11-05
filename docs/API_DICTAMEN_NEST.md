@@ -4,10 +4,39 @@ Propuesta para revisar con Frank. El agente no guarda los expedientes: Nest cons
 
 ## Flujo
 
-1. Por cada documento, Nest llama al análisis y guarda el `json_analista` de la respuesta, asociado al expediente.
+1. Por cada documento, Nest llama a `POST /api/analizar` y guarda el `json_analista` de la respuesta, asociado al expediente.
 2. Para el dictamen, Nest envía todos los `json_analista` del expediente a `POST /api/dictamen`.
 3. El agente calcula los puntajes, redacta el dictamen y lo devuelve. No guarda nada.
 4. Nest guarda el Markdown y genera el PDF.
+
+## `POST /api/analizar`
+
+Autenticación: header `X-Agent-Key`. La petición es `multipart/form-data`:
+
+| Campo | Ejemplo |
+|---|---|
+| `archivo` | el documento (máximo 25 MB) |
+| `nomenclatura` | `CA-SDEDTEOEL-CA-002-2026` |
+| `modalidad` | `CA_ACTO_UNICO_APERTURA_UNICA` |
+| `tipo_contratacion` | `BIENES` |
+| `tipo_documento` | `ACTA_INICIO` |
+
+Respuesta (200):
+
+```json
+{
+  "json_analista": {},
+  "informe_markdown": "# Informe...",
+  "estatus_global": "Rojo",
+  "tipo_coincide": true,
+  "tipo_detectado": null,
+  "metricas": {"latencia_ms": 45000, "tokens_total": 27000}
+}
+```
+
+Nest guarda `json_analista` sin modificarlo. El agente no conserva nada.
+
+Errores: los de la tabla de abajo, más 400 (archivo ilegible), 413 (demasiado grande), 415 (extensión no permitida) y 502 (respuesta incompleta del modelo; se puede reintentar).
 
 ## `POST /api/dictamen`
 
@@ -80,11 +109,14 @@ Errores:
 | 401 | Falta `X-Agent-Key` o no es válida |
 | 422 | Lista vacía o un documento sin `tipo_documento` válido |
 | 429 | Gemini saturado tras los reintentos; reintentar en unos minutos |
+| 503 | Instancia ocupada; reintentar después de los segundos que indica `Retry-After` |
 
 ## Para tener en cuenta
 
 - **Tiempo:** el dictamen de 12 documentos tardó 83 s en la prueba del 5/11, y puede tardar más si Gemini está saturado. El cliente necesita un tiempo de espera de al menos 5 minutos.
 - **Tamaño:** los 12 JSON de la prueba pesan unos 150 KB.
+- **Reintentos:** Nest debe reintentar los 503 respetando `Retry-After`. No significan que el documento falló.
+- **Sin memoria entre documentos:** `POST /api/analizar` revisa cada documento por separado. Las incoherencias entre documentos quedan para el dictamen.
 - **Documentos en la casilla equivocada:** llegan con `tipo_coincide: false`, no suman al puntaje y su tipo sigue figurando como pendiente.
 
 ## Por decidir con Frank

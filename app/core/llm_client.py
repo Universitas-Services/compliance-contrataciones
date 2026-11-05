@@ -6,6 +6,7 @@ import json
 import logging
 import os
 import re
+import threading
 import time
 from contextvars import ContextVar
 from typing import Any
@@ -28,6 +29,7 @@ logger = logging.getLogger(__name__)
 
 # Credenciales ADC cacheadas para Vertex (refresh cuando expiran).
 _vertex_creds: Any | None = None
+_vertex_lock = threading.Lock()
 
 # Acumulador de uso LLM por request (sandbox / métricas).
 _usage_ctx: ContextVar[dict[str, int] | None] = ContextVar("llm_usage", default=None)
@@ -268,13 +270,15 @@ def _vertex_access_token() -> str:
             "Ejecuta: pip install google-auth requests"
         ) from exc
 
-    if _vertex_creds is None:
-        _vertex_creds, _ = google_auth_default(
-            scopes=["https://www.googleapis.com/auth/cloud-platform"]
-        )
-    if not _vertex_creds.valid:
-        _vertex_creds.refresh(Request())
-    token = getattr(_vertex_creds, "token", None)
+    # Las credenciales no son seguras entre hilos: una sola renovación a la vez.
+    with _vertex_lock:
+        if _vertex_creds is None:
+            _vertex_creds, _ = google_auth_default(
+                scopes=["https://www.googleapis.com/auth/cloud-platform"]
+            )
+        if not _vertex_creds.valid:
+            _vertex_creds.refresh(Request())
+        token = getattr(_vertex_creds, "token", None)
     if not token:
         raise RuntimeError(
             "No se pudo obtener access token ADC para Vertex AI. "

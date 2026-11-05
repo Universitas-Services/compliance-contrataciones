@@ -5,11 +5,15 @@ from __future__ import annotations
 import json
 import math
 import tempfile
+import threading
 import uuid
+from collections.abc import Callable
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import TypeVar
 
 from fastapi import APIRouter, File, Form, HTTPException, Query, UploadFile
+from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import Response
 from openai import APIConnectionError, APIError, APITimeoutError, RateLimitError
 
@@ -43,6 +47,7 @@ from app.agents.report_agent import (
     informe_global_markdown,
 )
 from app.core import session_store
+from app.core.capacidad import cupo_analisis
 from app.core.llm_client import analizar_documento
 from app.core.security import (
     max_upload_bytes,
@@ -532,6 +537,347 @@ def abrir_sesion(body: CrearSesionRequest | None = None) -> CrearSesionResponse:
     return CrearSesionResponse(sesion=sesion, mensaje=mensaje)
 
 
+T = TypeVar("T")
+# Las cargas ya corren en hilos: dos a la vez no deben pisarse en la misma sesión.
+_registro_lock = threading.Lock()
+
+
+def _analizar_archivo(
+    sesion: SesionCompliance,
+    tipo: TipoDocumento,
+    tmp_path: str,
+    nombre_seguro: str,
+) -> DocumentoAnalizado:
+    """Analiza un archivo ya guardado. Bloqueante: se ejecuta en un hilo."""
+    agent = get_modalidad_agent(sesion.modalidad, sesion.tipo_contratacion)
+    requisitos = agent.requisitos(tipo)
+    cuest = cargar_cuestionario(sesion.modalidad, tipo)
+    tipo_ct = sesion.tipo_contratacion.value if sesion.tipo_contratacion else ""
+    items_llm = list(cuest.items) if cuest and cuest.items else []
+    items_excluidos: list = []
+    if cuest and cuest.items and tipo_ct:
+        items_llm, items_excluidos = particionar_items_por_tipo(cuest.items, tipo_ct)
+    # Solo preguntas del tipo de contrato: las de otro tipo no van al LLM ni al informe.
+    preguntas = (
+        [it.texto for it in items_llm]
+        if items_llm
+        else (agent.preguntas(tipo) if not (cuest and cuest.items) else [])
+    )
+    cuestionario_md = (
+        formato_cuestionario_compacto(cuest, items=items_llm)
+        if cuest and items_llm
+        else None
+    )
+    cuestionario_items = (
+        [
+            {
+                "codigo": it.codigo,
+                "texto": it.texto,
+                "rango_criticidad": it.rango_criticidad,
+                "fundamento_legal": it.fundamento_legal,
+                "condicion": it.condicion,
+            }
+            for it in items_llm
+        ]
+        if items_llm
+        else None
+    )
+
+    procesado = procesar_archivo(tmp_path, nombre_seguro)
+    docs_previos = _memoria_expediente(sesion, excluir=(tipo, nombre_seguro))
+    analisis = analizar_documento(
+        tipo,
+        procesado,
+        requisitos,
+        system_experto=agent.system_prompt_experto(),
+        preguntas_preestablecidas=preguntas,
+        cuestionario_markdown=cuestionario_md,
+        cuestionario_items=cuestionario_items,
+        modalidad=sesion.modalidad,
+        nomenclatura=sesion.nomenclatura,
+        docs_previos_resumen=docs_previos,
+        nombre_archivo=nombre_seguro,
+        tipo_contratacion=tipo_ct,
+        rubrica_prefill=None,
+        items_orden_completo=[it.codigo for it in items_llm] if items_llm else None,
+    )
+
+    preg_objs: list[PreguntaSeguimiento] = []
+    tipo_coincide = _as_bool(analisis.get("tipo_coincide"), default=True)
+    tipo_detectado_raw = analisis.get("tipo_detectado")
+    tipo_detectado = (
+        str(tipo_detectado_raw).strip() if tipo_detectado_raw not in (None, "") else None
+    )
+
+    # Solo ítems aplicables al tipo de contrato de la sesión.
+    if tipo_coincide:
+        seen_q: set[str] = set()
+        fuente_items = items_llm if items_llm else []
+        if fuente_items:
+            for it in fuente_items:
+                t = it.texto.strip()
+                if not t or t in seen_q:
+                    continue
+                seen_q.add(t)
+                preg_objs.append(
+                    PreguntaSeguimiento(
+                        id=f"q{len(preg_objs) + 1}",
+                        texto=t,
+                        codigo_pregunta=it.codigo,
+                        fundamento_legal=it.fundamento_legal,
+                        rango_criticidad=it.rango_criticidad,
+                        accion_legal=it.accion_legal,
+                        advertencia_gerencia=it.advertencia_gerencia,
+                    )
+                )
+        else:
+            for texto in preguntas:
+                t = str(texto).strip()
+                if not t or t in seen_q:
+                    continue
+                seen_q.add(t)
+                preg_objs.append(
+                    PreguntaSeguimiento(id=f"q{len(preg_objs) + 1}", texto=t)
+                )
+        aplicar_rubrica_agente(
+            preg_objs,
+            analisis.get("rubrica") or analisis.get("respuestas_cuestionario"),
+        )
+        if fuente_items:
+            verificar_integridad_rubrica(
+                preg_objs,
+                codigos_oficiales={it.codigo for it in fuente_items if it.codigo},
+            )
+
+    observaciones = _parse_observaciones(
+        analisis.get("observaciones") or analisis.get("hallazgos")
+    )
+    estatus_global = calcular_estatus_desde_preguntas(
+        preg_objs, tipo_coincide=tipo_coincide
+    )
+    # Observaciones críticas de identidad pueden forzar Rojo más abajo.
+    cumple = estatus_global == "Verde"
+    if not tipo_coincide:
+        cumple = False
+        estatus_global = "Rojo"
+        observaciones = _asegurar_obs_tipo_incorrecto(
+            observaciones,
+            tipo_declarado=tipo,
+            tipo_detectado=tipo_detectado,
+        )
+
+    hechos_raw = analisis.get("hechos_clave") or {}
+    nom_doc = None
+    if isinstance(hechos_raw, dict):
+        raw_nom = hechos_raw.get("nomenclatura_encontrada")
+        if raw_nom not in (None, ""):
+            nom_doc = str(raw_nom).strip()
+    observaciones = _asegurar_obs_nomenclatura(
+        observaciones,
+        nomenclatura_sesion=sesion.nomenclatura,
+        nomenclatura_encontrada=nom_doc,
+    )
+    if any(
+        "nomenclatura" in o.descripcion.lower() and o.severidad == "critica"
+        for o in observaciones
+    ):
+        if estatus_global != "Rojo":
+            estatus_global = "Rojo"
+        cumple = False
+
+    canon = procesado.get("canonico") or {}
+    extraccion = ExtraccionMeta(
+        metodo=str(canon.get("metodo") or procesado.get("modo") or "texto"),
+        paginas=int(canon.get("paginas") or 0),
+        bloques=int(canon.get("bloques") or 0),
+        advertencias=list(canon.get("advertencias") or []),
+        cobertura_ocr=canon.get("cobertura_ocr"),
+    )
+    # Truncar texto persistido para no inflar el store (máx ~80k chars)
+    texto_ext = str(procesado.get("texto_extraido") or "")
+    if len(texto_ext) > 80000:
+        texto_ext = texto_ext[:80000] + "\n…[truncado en persistencia]"
+
+    hallazgos = construir_hallazgos_analista(preg_objs) if preg_objs else []
+    tipo_label = tipo_ct or (
+        sesion.tipo_contratacion.value if sesion.tipo_contratacion else "N/D"
+    )
+    json_analista = construir_json_analista(
+        nombre_documento=nombre_seguro,
+        tipo_contrato=tipo_label,
+        estatus_global=estatus_global or "Amarillo",
+        hallazgos=hallazgos,
+        preguntas=preg_objs,
+        tipo_documento=tipo.value,
+        tipo_coincide=tipo_coincide,
+    )
+    informe_usuario = (
+        construir_informe_usuario_markdown(
+            nombre_documento=nombre_seguro,
+            tipo_contrato=tipo_label,
+            estatus_global=estatus_global or "Amarillo",
+            preguntas=preg_objs,
+        )
+        if preg_objs and tipo_coincide
+        else str(analisis.get("informe_markdown") or "")
+    )
+    met_raw = analisis.get("metricas") or {}
+    metricas = MetricasAnalisis(
+        latencia_ms=int(met_raw.get("latencia_ms") or 0),
+        tokens_prompt=int(met_raw.get("tokens_prompt") or 0),
+        tokens_completion=int(met_raw.get("tokens_completion") or 0),
+        tokens_total=int(met_raw.get("tokens_total") or 0),
+        tokens_cache=int(met_raw.get("tokens_cache") or 0),
+        llamadas_llm=int(met_raw.get("llamadas_llm") or 0),
+    )
+
+    documento = DocumentoAnalizado(
+        id=str(uuid.uuid4()),
+        tipo=tipo,
+        nombre_archivo=nombre_seguro,
+        resumen=str(analisis.get("resumen", "")),
+        observaciones=observaciones,
+        cumple=cumple,
+        fecha_analisis=datetime.now(timezone.utc),
+        informe_markdown=informe_usuario,
+        preguntas_seguimiento=preg_objs,
+        hallazgos=hallazgos,
+        json_analista=json_analista,
+        metricas=metricas,
+        tipo_coincide=tipo_coincide,
+        tipo_detectado=tipo_detectado,
+        texto_extraido=texto_ext,
+        extraccion=extraccion,
+        hechos_clave=_parse_hechos_clave(analisis.get("hechos_clave")),
+        estatus_global=estatus_global,  # type: ignore[arg-type]
+    )
+    sincronizar_informe_documento(documento)
+    return documento
+
+
+def _registrar_en_sesion(
+    sesion: SesionCompliance,
+    documento: DocumentoAnalizado,
+    tipo: TipoDocumento,
+    nombre_seguro: str,
+) -> AnalisisDocumentoResponse:
+    """Añade el documento analizado al expediente del sandbox y lo persiste."""
+    tipo_coincide = documento.tipo_coincide
+    tipo_detectado = documento.tipo_detectado
+    # Re-subida del mismo archivo (versión corregida o carga repetida por
+    # error): reemplaza a la anterior para no duplicar hallazgos en el dictamen.
+    previos = len(sesion.documentos_analizados)
+    sesion.documentos_analizados = [
+        d
+        for d in sesion.documentos_analizados
+        if not _es_mismo_documento(d, tipo, nombre_seguro)
+    ]
+    reemplazado = len(sesion.documentos_analizados) < previos
+    sesion.documentos_analizados.append(documento)
+    # Slot auditado solo si queda algún archivo del tipo declarado con
+    # identidad correcta (el reemplazo puede haber quitado el único válido).
+    for slot in sesion.checklist_slots:
+        if slot.tipo_documento == tipo:
+            slot.auditado = any(
+                d.tipo == tipo and getattr(d, "tipo_coincide", True)
+                for d in sesion.documentos_analizados
+            )
+
+    pendientes = _slots_pendientes(sesion)
+    sesion.documento_en_cuestionario = None
+    if not tipo_coincide:
+        documento.preguntas_seguimiento = []
+        msg = (
+            f"Documento incorrecto: declaraste {tipo.value}, pero el archivo "
+            f"parece ser {tipo_detectado or 'de otro tipo'}. "
+            "El slot NO queda marcado como auditado: puedes volver a subir "
+            f"el «{tipo.value}» correcto, o cargar este archivo eligiendo "
+            "el tipo que realmente es. "
+            f"Informe en /documentos/{documento.id}/informe."
+        )
+    else:
+        estatus_txt = documento.estatus_global or (
+            "Verde" if documento.cumple else "Amarillo"
+        )
+        msg = (
+            f"Revisión finalizada de «{nombre_seguro}» "
+            f"(estatus {estatus_txt}). "
+            f"Informe en /documentos/{documento.id}/informe "
+            f"(también .pdf / .docx)."
+        )
+        if pendientes:
+            msg += f" Documentos aún sin revisar: {len(pendientes)}."
+        rubrica_txt = resumen_rubrica_chat(documento)
+        if rubrica_txt:
+            msg += "\n\n" + rubrica_txt
+    if reemplazado:
+        msg = (
+            f"Se reemplazó la revisión anterior de «{nombre_seguro}» "
+            "(mismo archivo y tipo). " + msg
+        )
+
+    session_store.guardar_sesion(sesion.id, sesion)
+    return AnalisisDocumentoResponse(
+        documento=documento,
+        mensaje=msg,
+        slots_pendientes=pendientes,
+        metricas=documento.metricas,
+        json_analista=documento.json_analista,
+    )
+
+
+async def _subir_y_procesar(archivo: UploadFile, procesar: Callable[[str, str], T]) -> T:
+    """Guarda el archivo y ejecuta `procesar(ruta, nombre)` fuera del event loop.
+
+    El análisis tarda casi un minuto: en un hilo, la instancia sigue atendiendo
+    otras peticiones (incluida /health) mientras tanto.
+    """
+    nombre_seguro = sanitizar_nombre_archivo(archivo.filename)
+    try:
+        suffix = validar_extension_upload(nombre_seguro)
+    except ValueError as exc:
+        raise HTTPException(status_code=415, detail=str(exc)) from exc
+
+    limite = max_upload_bytes()
+    tmp_path: str | None = None
+    try:
+        with cupo_analisis():
+            with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
+                tmp_path = tmp.name
+                total = 0
+                while True:
+                    chunk = await archivo.read(1024 * 1024)
+                    if not chunk:
+                        break
+                    total += len(chunk)
+                    if total > limite:
+                        raise HTTPException(
+                            status_code=413,
+                            detail=(
+                                f"Archivo demasiado grande. Máximo "
+                                f"{limite // (1024 * 1024)} MB."
+                            ),
+                        )
+                    tmp.write(chunk)
+            return await run_in_threadpool(procesar, tmp_path, nombre_seguro)
+    except _LLM_ERRORS as exc:
+        raise _http_from_llm(exc) from exc
+    except json.JSONDecodeError as exc:
+        raise HTTPException(
+            status_code=502,
+            detail=(
+                "El modelo devolvió una respuesta incompleta al analizar el "
+                "documento. Reintenta la carga; si persiste, prueba con un "
+                "archivo más liviano."
+            ),
+        ) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    finally:
+        if tmp_path:
+            Path(tmp_path).unlink(missing_ok=True)
+
+
 @router.post("/sandbox/analizar", response_model=SandboxAnalizarResponse)
 async def sandbox_analizar(
     archivo: UploadFile = File(...),
@@ -650,325 +996,25 @@ async def cargar_documento(
             detail="Configura nomenclatura, modalidad y tipo antes de cargar documentos.",
         )
 
-    agent = get_modalidad_agent(sesion.modalidad, sesion.tipo_contratacion)
-    requisitos = agent.requisitos(tipo)
-    cuest = cargar_cuestionario(sesion.modalidad, tipo)
-    tipo_ct = sesion.tipo_contratacion.value if sesion.tipo_contratacion else ""
-    items_llm = list(cuest.items) if cuest and cuest.items else []
-    items_excluidos: list = []
-    if cuest and cuest.items and tipo_ct:
-        items_llm, items_excluidos = particionar_items_por_tipo(cuest.items, tipo_ct)
-    # Solo preguntas del tipo de contrato: las de otro tipo no van al LLM ni al informe.
-    preguntas = (
-        [it.texto for it in items_llm]
-        if items_llm
-        else (agent.preguntas(tipo) if not (cuest and cuest.items) else [])
-    )
-    cuestionario_md = (
-        formato_cuestionario_compacto(cuest, items=items_llm)
-        if cuest and items_llm
-        else None
-    )
-    cuestionario_items = (
-        [
-            {
-                "codigo": it.codigo,
-                "texto": it.texto,
-                "rango_criticidad": it.rango_criticidad,
-                "fundamento_legal": it.fundamento_legal,
-                "condicion": it.condicion,
-            }
-            for it in items_llm
-        ]
-        if items_llm
-        else None
-    )
+    def procesar(ruta: str, nombre: str) -> AnalisisDocumentoResponse:
+        documento = _analizar_archivo(sesion, tipo, ruta, nombre)
+        with _registro_lock:
+            return _registrar_en_sesion(sesion, documento, tipo, nombre)
 
-    nombre_seguro = sanitizar_nombre_archivo(archivo.filename)
-    try:
-        suffix = validar_extension_upload(nombre_seguro)
-    except ValueError as exc:
-        raise HTTPException(status_code=415, detail=str(exc)) from exc
-
-    limite = max_upload_bytes()
-    tmp_path: str | None = None
-    try:
-        with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
-            tmp_path = tmp.name
-            total = 0
-            while True:
-                chunk = await archivo.read(1024 * 1024)
-                if not chunk:
-                    break
-                total += len(chunk)
-                if total > limite:
-                    raise HTTPException(
-                        status_code=413,
-                        detail=(
-                            f"Archivo demasiado grande. Máximo "
-                            f"{limite // (1024 * 1024)} MB."
-                        ),
-                    )
-                tmp.write(chunk)
-
-        procesado = procesar_archivo(tmp_path, nombre_seguro)
-        docs_previos = _memoria_expediente(sesion, excluir=(tipo, nombre_seguro))
-        analisis = analizar_documento(
-            tipo,
-            procesado,
-            requisitos,
-            system_experto=agent.system_prompt_experto(),
-            preguntas_preestablecidas=preguntas,
-            cuestionario_markdown=cuestionario_md,
-            cuestionario_items=cuestionario_items,
-            modalidad=sesion.modalidad,
-            nomenclatura=sesion.nomenclatura,
-            docs_previos_resumen=docs_previos,
-            nombre_archivo=nombre_seguro,
-            tipo_contratacion=tipo_ct,
-            rubrica_prefill=None,
-            items_orden_completo=[it.codigo for it in items_llm] if items_llm else None,
-        )
-
-        preg_objs: list[PreguntaSeguimiento] = []
-        tipo_coincide = _as_bool(analisis.get("tipo_coincide"), default=True)
-        tipo_detectado_raw = analisis.get("tipo_detectado")
-        tipo_detectado = (
-            str(tipo_detectado_raw).strip() if tipo_detectado_raw not in (None, "") else None
-        )
-
-        # Solo ítems aplicables al tipo de contrato de la sesión.
-        if tipo_coincide:
-            seen_q: set[str] = set()
-            fuente_items = items_llm if items_llm else []
-            if fuente_items:
-                for it in fuente_items:
-                    t = it.texto.strip()
-                    if not t or t in seen_q:
-                        continue
-                    seen_q.add(t)
-                    preg_objs.append(
-                        PreguntaSeguimiento(
-                            id=f"q{len(preg_objs) + 1}",
-                            texto=t,
-                            codigo_pregunta=it.codigo,
-                            fundamento_legal=it.fundamento_legal,
-                            rango_criticidad=it.rango_criticidad,
-                            accion_legal=it.accion_legal,
-                            advertencia_gerencia=it.advertencia_gerencia,
-                        )
-                    )
-            else:
-                for texto in preguntas:
-                    t = str(texto).strip()
-                    if not t or t in seen_q:
-                        continue
-                    seen_q.add(t)
-                    preg_objs.append(
-                        PreguntaSeguimiento(id=f"q{len(preg_objs) + 1}", texto=t)
-                    )
-            aplicar_rubrica_agente(
-                preg_objs,
-                analisis.get("rubrica") or analisis.get("respuestas_cuestionario"),
-            )
-            if fuente_items:
-                verificar_integridad_rubrica(
-                    preg_objs,
-                    codigos_oficiales={it.codigo for it in fuente_items if it.codigo},
-                )
-
-        observaciones = _parse_observaciones(
-            analisis.get("observaciones") or analisis.get("hallazgos")
-        )
-        estatus_global = calcular_estatus_desde_preguntas(
-            preg_objs, tipo_coincide=tipo_coincide
-        )
-        # Observaciones críticas de identidad pueden forzar Rojo más abajo.
-        cumple = estatus_global == "Verde"
-        if not tipo_coincide:
-            cumple = False
-            estatus_global = "Rojo"
-            observaciones = _asegurar_obs_tipo_incorrecto(
-                observaciones,
-                tipo_declarado=tipo,
-                tipo_detectado=tipo_detectado,
-            )
-
-        hechos_raw = analisis.get("hechos_clave") or {}
-        nom_doc = None
-        if isinstance(hechos_raw, dict):
-            raw_nom = hechos_raw.get("nomenclatura_encontrada")
-            if raw_nom not in (None, ""):
-                nom_doc = str(raw_nom).strip()
-        observaciones = _asegurar_obs_nomenclatura(
-            observaciones,
-            nomenclatura_sesion=sesion.nomenclatura,
-            nomenclatura_encontrada=nom_doc,
-        )
-        if any(
-            "nomenclatura" in o.descripcion.lower() and o.severidad == "critica"
-            for o in observaciones
-        ):
-            if estatus_global != "Rojo":
-                estatus_global = "Rojo"
-            cumple = False
-
-        canon = procesado.get("canonico") or {}
-        extraccion = ExtraccionMeta(
-            metodo=str(canon.get("metodo") or procesado.get("modo") or "texto"),
-            paginas=int(canon.get("paginas") or 0),
-            bloques=int(canon.get("bloques") or 0),
-            advertencias=list(canon.get("advertencias") or []),
-            cobertura_ocr=canon.get("cobertura_ocr"),
-        )
-        # Truncar texto persistido para no inflar el store (máx ~80k chars)
-        texto_ext = str(procesado.get("texto_extraido") or "")
-        if len(texto_ext) > 80000:
-            texto_ext = texto_ext[:80000] + "\n…[truncado en persistencia]"
-
-        hallazgos = construir_hallazgos_analista(preg_objs) if preg_objs else []
-        tipo_label = tipo_ct or (
-            sesion.tipo_contratacion.value if sesion.tipo_contratacion else "N/D"
-        )
-        json_analista = construir_json_analista(
-            nombre_documento=nombre_seguro,
-            tipo_contrato=tipo_label,
-            estatus_global=estatus_global or "Amarillo",
-            hallazgos=hallazgos,
-            preguntas=preg_objs,
-            tipo_documento=tipo.value,
-            tipo_coincide=tipo_coincide,
-        )
-        informe_usuario = (
-            construir_informe_usuario_markdown(
-                nombre_documento=nombre_seguro,
-                tipo_contrato=tipo_label,
-                estatus_global=estatus_global or "Amarillo",
-                preguntas=preg_objs,
-            )
-            if preg_objs and tipo_coincide
-            else str(analisis.get("informe_markdown") or "")
-        )
-        met_raw = analisis.get("metricas") or {}
-        metricas = MetricasAnalisis(
-            latencia_ms=int(met_raw.get("latencia_ms") or 0),
-            tokens_prompt=int(met_raw.get("tokens_prompt") or 0),
-            tokens_completion=int(met_raw.get("tokens_completion") or 0),
-            tokens_total=int(met_raw.get("tokens_total") or 0),
-            tokens_cache=int(met_raw.get("tokens_cache") or 0),
-            llamadas_llm=int(met_raw.get("llamadas_llm") or 0),
-        )
-
-        documento = DocumentoAnalizado(
-            id=str(uuid.uuid4()),
-            tipo=tipo,
-            nombre_archivo=nombre_seguro,
-            resumen=str(analisis.get("resumen", "")),
-            observaciones=observaciones,
-            cumple=cumple,
-            fecha_analisis=datetime.now(timezone.utc),
-            informe_markdown=informe_usuario,
-            preguntas_seguimiento=preg_objs,
-            hallazgos=hallazgos,
-            json_analista=json_analista,
-            metricas=metricas,
-            tipo_coincide=tipo_coincide,
-            tipo_detectado=tipo_detectado,
-            texto_extraido=texto_ext,
-            extraccion=extraccion,
-            hechos_clave=_parse_hechos_clave(analisis.get("hechos_clave")),
-            estatus_global=estatus_global,  # type: ignore[arg-type]
-        )
-        sincronizar_informe_documento(documento)
-
-        # Re-subida del mismo archivo (versión corregida o carga repetida por
-        # error): reemplaza a la anterior para no duplicar hallazgos en el dictamen.
-        previos = len(sesion.documentos_analizados)
-        sesion.documentos_analizados = [
-            d
-            for d in sesion.documentos_analizados
-            if not _es_mismo_documento(d, tipo, nombre_seguro)
-        ]
-        reemplazado = len(sesion.documentos_analizados) < previos
-        sesion.documentos_analizados.append(documento)
-        # Slot auditado solo si queda algún archivo del tipo declarado con
-        # identidad correcta (el reemplazo puede haber quitado el único válido).
-        for slot in sesion.checklist_slots:
-            if slot.tipo_documento == tipo:
-                slot.auditado = any(
-                    d.tipo == tipo and getattr(d, "tipo_coincide", True)
-                    for d in sesion.documentos_analizados
-                )
-
-        pendientes = _slots_pendientes(sesion)
-        sesion.documento_en_cuestionario = None
-        if not tipo_coincide:
-            documento.preguntas_seguimiento = []
-            msg = (
-                f"Documento incorrecto: declaraste {tipo.value}, pero el archivo "
-                f"parece ser {tipo_detectado or 'de otro tipo'}. "
-                "El slot NO queda marcado como auditado: puedes volver a subir "
-                f"el «{tipo.value}» correcto, o cargar este archivo eligiendo "
-                "el tipo que realmente es. "
-                f"Informe en /documentos/{documento.id}/informe."
-            )
-        else:
-            estatus_txt = documento.estatus_global or (
-                "Verde" if documento.cumple else "Amarillo"
-            )
-            msg = (
-                f"Revisión finalizada de «{nombre_seguro}» "
-                f"(estatus {estatus_txt}). "
-                f"Informe en /documentos/{documento.id}/informe "
-                f"(también .pdf / .docx)."
-            )
-            if pendientes:
-                msg += f" Documentos aún sin revisar: {len(pendientes)}."
-            rubrica_txt = resumen_rubrica_chat(documento)
-            if rubrica_txt:
-                msg += "\n\n" + rubrica_txt
-        if reemplazado:
-            msg = (
-                f"Se reemplazó la revisión anterior de «{nombre_seguro}» "
-                "(mismo archivo y tipo). " + msg
-            )
-
-        session_store.guardar_sesion(sesion.id, sesion)
-        return AnalisisDocumentoResponse(
-            documento=documento,
-            mensaje=msg,
-            slots_pendientes=pendientes,
-            metricas=documento.metricas,
-            json_analista=documento.json_analista,
-        )
-    except _LLM_ERRORS as exc:
-        raise _http_from_llm(exc) from exc
-    except json.JSONDecodeError as exc:
-        raise HTTPException(
-            status_code=502,
-            detail=(
-                "El modelo devolvió una respuesta incompleta al analizar el "
-                "documento. Reintenta la carga; si persiste, prueba con un "
-                "archivo más liviano."
-            ),
-        ) from exc
-    except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
-    finally:
-        if tmp_path:
-            Path(tmp_path).unlink(missing_ok=True)
+    return await _subir_y_procesar(archivo, procesar)
 
 
 @router.post("/{sesion_id}/juridico", response_model=JuridicoResponse)
 def revision_juridica(sesion_id: str, body: JuridicoRequest) -> JuridicoResponse:
     sesion = _require_sesion(sesion_id)
     try:
-        dictamen = ejecutar_dictamen_juridico(
-            sesion,
-            mensaje=body.mensaje,
-            documento_ids=body.documento_ids,
-            forzar_final=body.forzar_final,
-        )
+        with cupo_analisis():
+            dictamen = ejecutar_dictamen_juridico(
+                sesion,
+                mensaje=body.mensaje,
+                documento_ids=body.documento_ids,
+                forzar_final=body.forzar_final,
+            )
     except ValueError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
     except _LLM_ERRORS as exc:

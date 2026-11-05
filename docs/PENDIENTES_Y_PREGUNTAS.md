@@ -123,6 +123,20 @@ Por decidir:
    - Despliegue manual desde la PC: definir el flujo (punto 2).
 8. Recordatorio: mientras no esté la BD (sección 2), las pruebas en Cloud Run deben subir los documentos y pedir el dictamen en la misma sesión y el mismo día.
 
+## 5.1 Plan de carga: 1000 personas simultáneas (5/11)
+
+Objetivo: que el servicio nunca se caiga. Acepta, encola y procesa al ritmo que permita Gemini.
+
+- [x] **Fase 1, código (pendiente de commit y despliegue):** análisis en hilos, límite por instancia (`MAX_ANALISIS_CONCURRENTES`, 8 por defecto; 503 con `Retry-After`), `POST /api/analizar` sin estado y credenciales de Vertex seguras entre hilos. Prueba: `scripts/test_capacidad.py`.
+- [ ] **Fase 2, configuración de Cloud Run:** concurrencia por instancia, 30 a 50 instancias como máximo y tope de gasto.
+- [ ] **Fase 3, cola:** Nest sube a GCS, Cloud Tasks procesa y un callback avisa. Hablarlo con Frank.
+- [ ] **Fase 4, Gemini:** modelo de respaldo, cuota y Provisioned Throughput.
+- [ ] **Fase 5, prueba de carga** con Gemini simulado.
+
+Por decidir: `POST /api/analizar` no tiene la memoria entre documentos que sí tiene el sandbox (`_memoria_expediente`).
+
+Detectado de paso: `scripts/test_dupla_extraccion.py` ya fallaba antes de la Fase 1 (espera «JURÍDICO» en el prompt experto), y `.txt` pasa la validación de subida pero el extractor lo rechaza con 400.
+
 ## 6. Cómo arrancar el entorno local (sandbox)
 
 En PowerShell, desde la carpeta del proyecto (`compliance-contrataciones-clean`):

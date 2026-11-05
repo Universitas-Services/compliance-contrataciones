@@ -376,6 +376,17 @@ class JuridicoRequest(BaseModel):
     forzar_final: bool = False
 
 
+class AnalisisSinEstadoResponse(BaseModel):
+    """Análisis de un documento sin sesión: Nest guarda `json_analista`."""
+
+    json_analista: dict | None = None
+    informe_markdown: str
+    estatus_global: str | None = None
+    tipo_coincide: bool = True
+    tipo_detectado: str | None = None
+    metricas: MetricasAnalisis | None = None
+
+
 class DictamenExpedienteRequest(BaseModel):
     """Dictamen sin estado: Nest envía los `json_analista` del expediente."""
 
