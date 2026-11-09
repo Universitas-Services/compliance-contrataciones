@@ -33,4 +33,5 @@ def emitir_dictamen(body: DictamenExpedienteRequest) -> DictamenExpedienteRespon
         markdown=dictamen.markdown,
         puntaje=dictamen.puntaje,
         pendientes=dictamen.slots_pendientes,
+        coherencia=dictamen.coherencia,
     )

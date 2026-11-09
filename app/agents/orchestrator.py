@@ -16,7 +16,9 @@ from app.agents.puntaje import bloque_resultados, puntaje_de_documentos
 from app.core import session_store
 from app.core.llm_client import (
     chat_compliance,
+    bloque_coherencia,
     consultar_juridico,
+    verificar_coherencia,
     interpretar_cambio_nomenclatura,
     interpretar_turno_config,
 )
@@ -25,7 +27,9 @@ from app.models.schemas import (
     DictamenJuridico,
     DocumentoAnalizado,
     EstadoSesion,
+    HechosClave,
     MensajeChat,
+    Observacion,
     Modalidad,
     PreguntaSeguimiento,
     RolAgente,
@@ -411,6 +415,7 @@ def ejecutar_dictamen_juridico(
         pendientes=[] if alcance == AlcanceDictamen.FINAL else pendientes,
     )
 
+    contradicciones = verificar_coherencia([d for d in docs if d.tipo_coincide])
     juridico = get_agente(sesion.modalidad, sesion.tipo_contratacion, RolAgente.JURIDICO)
     markdown = consultar_juridico(
         sesion,
@@ -420,6 +425,7 @@ def ejecutar_dictamen_juridico(
         slots_pendientes=[p.value for p in pendientes],
         alcance=alcance.value,
         resultados=bloque_resultados(puntaje, etiquetas=etiquetas),
+        coherencia=bloque_coherencia(contradicciones),
     )
 
     dictamen = DictamenJuridico(
@@ -431,6 +437,7 @@ def ejecutar_dictamen_juridico(
         markdown=markdown,
         slots_pendientes=list(pendientes),
         puntaje=puntaje.a_dict(),
+        coherencia=contradicciones,
     )
     sesion.dictamenes_juridicos.append(dictamen)
     etiqueta = "final" if alcance == AlcanceDictamen.FINAL else "parcial"
@@ -487,6 +494,16 @@ def _documento_desde_json(js: dict) -> DocumentoAnalizado:
         + [pregunta(n, "na", "motivo") for n in js.get("no_aplica") or []]
     )
     estatus = js.get("estatus_global")
+    try:
+        hechos = HechosClave.model_validate(js.get("hechos_clave") or {})
+    except ValueError:
+        hechos = HechosClave()
+    observaciones = []
+    for o in js.get("observaciones") or []:
+        try:
+            observaciones.append(Observacion.model_validate(o))
+        except ValueError:
+            continue
     return DocumentoAnalizado(
         id=str(uuid.uuid4()),
         tipo=tipo,
@@ -498,6 +515,8 @@ def _documento_desde_json(js: dict) -> DocumentoAnalizado:
         json_analista=js,
         tipo_coincide=bool(js.get("tipo_coincide", True)),
         estatus_global=estatus,
+        hechos_clave=hechos,
+        observaciones=observaciones,
     )
 
 

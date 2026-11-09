@@ -89,7 +89,15 @@ Respuesta 200:
     "hallazgos": [],
     "resumen": {"evaluados": 26, "conformes": 16, "hallazgos": 10, "no_aplica": 0},
     "conformes": [],
-    "no_aplica": []
+    "no_aplica": [],
+    "hechos_clave": {
+      "montos": [{"etiqueta": "Presupuesto Base Estimado", "texto": "", "valor_num": 10096939.28, "moneda": "VES"}],
+      "plazos": [{"etiqueta": "Acto Público de Recepción y Apertura", "texto": "11/05/2026"}],
+      "partes": [],
+      "nomenclatura_encontrada": "CA-SDEDTEOEL-CA-002-2026",
+      "otros": []
+    },
+    "observaciones": [{"severidad": "advertencia", "descripcion": "..."}]
   },
   "informe_markdown": "# Informe...",
   "estatus_global": "Rojo",
@@ -108,7 +116,7 @@ Respuesta 200:
 
 | Campo | Qué hacer con él |
 |---|---|
-| `json_analista` | Guardarlo completo. Se envía después al dictamen |
+| `json_analista` | Guardarlo completo. Se envía después al dictamen. Incluye `hechos_clave` (montos, plazos, partes y nomenclatura) y `observaciones`, que el dictamen usa para comparar documentos |
 | `informe_markdown` | Informe del documento. Guardarlo; mostrarlo o no al usuario está por decidir (sección 12) |
 | `estatus_global` | `Verde`, `Amarillo` o `Rojo`. Sirve para mostrar el estado en la app |
 | `tipo_coincide` | Si es `false`, el archivo no corresponde al tipo declarado (sección 9) |
@@ -182,7 +190,18 @@ Respuesta 200:
     "revisados": ["Acta de Inicio"],
     "faltantes": ["Contrato (u Orden de Compra/Servicio)"]
   },
-  "pendientes": ["NOTIFICACION_NO_ADJUDICADOS", "CONTRATO"]
+  "pendientes": ["NOTIFICACION_NO_ADJUDICADOS", "CONTRATO"],
+  "coherencia": [
+    {
+      "dato": "Monto adjudicado a Distribuidora Ofilar, C.A.",
+      "documento_a": "acta_de_adjudicacion.docx",
+      "valor_a": "3905511.43 VES",
+      "documento_b": "notificacion_ofilar.docx",
+      "valor_b": "4905511.43 VES",
+      "gravedad": "alta",
+      "explicacion": "El monto notificado no coincide con el del acta de adjudicación."
+    }
+  ]
 }
 ```
 
@@ -192,6 +211,7 @@ Respuesta 200:
 | `markdown` | El entregable. Guardarlo y convertirlo a PDF. No trae tablas |
 | `puntaje` | Datos calculados por código. Guardarlo; se puede usar en pantallas de la app |
 | `pendientes` | Tipos de documento que faltan |
+| `coherencia` | Contradicciones entre documentos: montos, fechas, partes o nomenclatura. Lista vacía si no hay. También aparecen en el Markdown. Opcional mostrarlas en la app |
 
 Un expediente de 12 documentos pesa unos 150 KB en JSON y tardó 83 s en la prueba del 5/11.
 
@@ -311,7 +331,7 @@ Si el resultado es `definitivo: false`, el trabajo pasa a `ERROR` y el usuario p
 - **Documento en la casilla equivocada:** si `tipo_coincide` es `false`, el análisis responde 200, pero el documento no suma al puntaje y su tipo sigue pendiente. Nest debe avisar al usuario y permitirle reemplazarlo. No debe contarlo como entregado.
 - **Reemplazar un documento:** si el usuario sube una versión corregida, Nest sustituye el JSON anterior. Si envía los dos al dictamen, ambos cuentan.
 - **Dictamen Parcial y Final:** por defecto es `PARCIAL` si falta algún documento. `forzar_final: true` emite `FINAL` aunque falten.
-- **Sin memoria entre documentos:** cada análisis revisa un solo documento. Las incoherencias entre documentos se evalúan en el dictamen.
+- **Sin memoria entre documentos:** cada análisis revisa un solo documento. Las contradicciones entre documentos las busca el dictamen, que recibe todos los JSON juntos, y las devuelve en `coherencia`. Por eso Nest debe enviar el `json_analista` completo. En la medición del 9/11, analizar sin memoria dio resultados dentro de la variación normal del modelo.
 - **Lo que ve el usuario final:** el entregable es el dictamen. No debe ver las preguntas del cuestionario.
 
 ## 10. Datos que debe guardar Nest

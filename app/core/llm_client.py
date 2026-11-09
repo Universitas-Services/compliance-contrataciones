@@ -1872,9 +1872,12 @@ def _expediente_para_juridico(docs: list) -> str:
             if (o.severidad or "") in {"critica", "advertencia"}
         ]
         nom = None
+        hechos = ""
         hc = getattr(d, "hechos_clave", None)
         if hc is not None:
             nom = getattr(hc, "nomenclatura_encontrada", None)
+            if hasattr(hc, "resumen_texto") and (hc.montos or hc.plazos or hc.partes):
+                hechos = _recorte(hc.resumen_texto(), 600)
         bloques.append(
             f"## {etiqueta_documento(d.tipo)} ({d.nombre_archivo})\n"
             f"estatus={getattr(d, 'estatus_global', None)} cumple={d.cumple} "
@@ -1883,6 +1886,7 @@ def _expediente_para_juridico(docs: list) -> str:
             + "\n"
             f"rúbrica: si={counts['si']} na={counts['na']} no={counts['no']} "
             f"parcial={counts['parcial']} no_consta={counts['no_consta']}\n"
+            + (f"hechos: {hechos}\n" if hechos else "")
             + ("Observaciones:\n" + "\n".join(obs[:6]) + "\n" if obs else "")
         )
     return "\n".join(bloques) if bloques else "(sin documentos auditados)"
@@ -1962,6 +1966,77 @@ def _basamento_juridico(
     )
 
 
+def verificar_coherencia(docs: list) -> list[dict]:
+    """Contradicciones de montos, plazos, partes o nomenclatura entre documentos.
+
+    Llamada corta y aparte del dictamen: el análisis sin estado no ve el resto
+    del expediente, y dentro del dictamen el Jurídico pasa por alto el cruce.
+    """
+    from app.agents.knowledge import etiqueta_documento
+
+    piezas = []
+    for d in docs:
+        hc = getattr(d, "hechos_clave", None)
+        if hc is None or not (hc.montos or hc.plazos or hc.partes or hc.nomenclatura_encontrada):
+            continue
+        piezas.append(
+            f"- {etiqueta_documento(d.tipo)} ({d.nombre_archivo}): "
+            f"{_recorte(hc.resumen_texto(), 1500)}"
+        )
+    if len(piezas) < 2:
+        return []
+    system = (
+        "Eres auditor de contrataciones públicas. Recibes los datos clave "
+        "extraídos de cada documento de un mismo expediente. Busca SOLO "
+        "contradicciones materiales entre documentos distintos sobre el mismo "
+        "dato: monto adjudicado distinto del notificado o del contratado, "
+        "adjudicatario distinto, nomenclatura distinta, fechas del cronograma "
+        "que no coinciden. No son contradicción: datos que faltan en un "
+        "documento, redondeos, formatos distintos, montos de renglones o "
+        "parciales que se suman, ni conversiones de moneda declaradas. "
+        "Si no hay ninguna, devuelve una lista vacía.\n"
+        'SOLO JSON: {"contradicciones": [{"dato": str, "documento_a": str, '
+        '"valor_a": str, "documento_b": str, "valor_b": str, '
+        '"gravedad": "alta"|"media", "explicacion": str}]}'
+    )
+    user = "Datos clave por documento:\n" + "\n".join(piezas)
+    data = None
+    for _ in range(2):  # un reintento si el JSON llega cortado
+        try:
+            raw = _llamar_modelo(
+                system=system, user_content=user, max_tokens=8192, reasoning_effort="low"
+            )
+            data = _limpiar_y_parsear_json(raw)
+            break
+        except (json.JSONDecodeError, TypeError, ValueError) as exc:
+            logger.warning("verificar_coherencia: respuesta inválida (%s)", exc)
+    if data is None:
+        return []
+    lista = data.get("contradicciones") if isinstance(data, dict) else None
+    campos = ("dato", "documento_a", "valor_a", "documento_b", "valor_b", "gravedad", "explicacion")
+    return [
+        {k: str(c.get(k) or "") for k in campos}
+        for c in (lista or [])
+        if isinstance(c, dict) and c.get("documento_a") and c.get("documento_b")
+    ]
+
+
+def bloque_coherencia(contradicciones: list[dict]) -> str:
+    """Bloque para el Jurídico con las contradicciones ya verificadas."""
+    if not contradicciones:
+        return (
+            "CONTRADICCIONES ENTRE DOCUMENTOS (verificadas por el sistema): "
+            "ninguna detectada."
+        )
+    lineas = ["CONTRADICCIONES ENTRE DOCUMENTOS (verificadas por el sistema):"]
+    for c in contradicciones:
+        lineas.append(
+            f"- [{c['gravedad'] or 'media'}] {c['dato']}: {c['documento_a']} = "
+            f"{c['valor_a']}; {c['documento_b']} = {c['valor_b']}. {c['explicacion']}"
+        )
+    return "\n".join(lineas)
+
+
 def consultar_juridico(
     sesion: SesionCompliance,
     *,
@@ -1971,6 +2046,7 @@ def consultar_juridico(
     slots_pendientes: list[str] | None = None,
     alcance: str = "PARCIAL",
     resultados: str = "",
+    coherencia: str = "",
 ) -> str:
     """Dictamen jurídico narrativo (markdown).
 
@@ -2119,6 +2195,9 @@ def consultar_juridico(
         "no consta en ESE documento y puede constar en otra pieza: crúzalo con "
         "los demás documentos y sus 'conformes' antes de imputarlo. "
         "Cita normas SOLO del basamento o de los hallazgos. "
+        "Si el bloque «CONTRADICCIONES ENTRE DOCUMENTOS» trae alguna, es "
+        "OBLIGATORIO incluirlas en la sección 3, en un párrafo propio, citando "
+        "ambos documentos y ambos valores; no agregues otras. "
         "OBLIGATORIO: termina la sección 4 con una frase completa; no cortes a media idea.\n"
         f"{kb_jur}"
     )
@@ -2128,6 +2207,7 @@ def consultar_juridico(
         f"Checklist:\n{checklist_txt}\n"
         f"Pendientes: {slots_pendientes or []}\n\n"
         + (f"{resultados}\n\n" if resultados else "")
+        + (f"{coherencia}\n\n" if coherencia else "")
         + "Hallazgos del Analista (compacto):\n"
         f"{json.dumps(paquetes, ensure_ascii=False)}\n\n"
         f"Resumen expediente:\n{expediente_txt}"

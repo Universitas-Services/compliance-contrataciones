@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import os
 
 from fastapi.testclient import TestClient
@@ -100,7 +101,68 @@ def test_documento_incorrecto_no_cuenta() -> None:
     print("OK documento en la casilla equivocada no cuenta")
 
 
+def test_hechos_llegan_al_juridico() -> None:
+    """Montos y observaciones del JSON llegan al Jurídico para cruzarlos."""
+    oferta = _js("OFERTAS", "oferta.pdf")
+    oferta["hechos_clave"] = {
+        "montos": [{"etiqueta": "total ofertado", "valor_num": 11388668.65, "moneda": "Bs"}],
+        "partes": ["Ofilar"],
+    }
+    adj = _js("ADJUDICACION_O_EQUIVALENTE", "adjudicacion.docx")
+    adj["hechos_clave"] = {
+        "montos": [{"etiqueta": "monto adjudicado", "valor_num": 12500000.0, "moneda": "Bs"}],
+        "partes": ["Ofilar"],
+    }
+    adj["observaciones"] = [{"severidad": "advertencia", "descripcion": "Firma ilegible."}]
+    capturas: dict = {}
+    r = _cliente(capturas).post("/api/dictamen", json={**CUERPO, "documentos": [oferta, adj]})
+    assert r.status_code == 200, r.text
+    user = capturas["user"]
+    assert "total ofertado=11388668.65 Bs" in user, user
+    assert "monto adjudicado=12500000.0 Bs" in user
+    assert "Firma ilegible." in user
+    # Un JSON viejo, sin estos campos, sigue funcionando.
+    assert orchestrator._documento_desde_json(_js("ACTA_INICIO", "a.docx")).hechos_clave.montos == []
+    print("OK hechos clave y observaciones llegan al Jurídico")
+
+
+def test_coherencia() -> None:
+    """La verificación aparte devuelve las contradicciones y llegan al Jurídico."""
+    oferta = _js("NOTIFICACION_ADJUDICADOS", "notificacion.docx")
+    oferta["hechos_clave"] = {"montos": [{"etiqueta": "monto adjudicado", "valor_num": 4905511.43}]}
+    adj = _js("ADJUDICACION_O_EQUIVALENTE", "adjudicacion.docx")
+    adj["hechos_clave"] = {"montos": [{"etiqueta": "monto adjudicado", "valor_num": 3905511.43}]}
+    contradiccion = {
+        "dato": "monto adjudicado",
+        "documento_a": "adjudicacion.docx",
+        "valor_a": "3.905.511,43",
+        "documento_b": "notificacion.docx",
+        "valor_b": "4.905.511,43",
+        "gravedad": "alta",
+        "explicacion": "La notificación no coincide con el acta.",
+    }
+    capturas: dict = {}
+
+    def falso(**kw):
+        if "Datos clave por documento" in str(kw.get("user_content")):
+            capturas["coherencia"] = kw["user_content"]
+            return json.dumps({"contradicciones": [contradiccion]}), "stop"
+        capturas["user"] = kw.get("user_content")
+        return "## 1. Alcance\nok.\n## 4. Conclusión\nFin.", "stop"
+
+    llm_client._llamar_modelo_meta = falso
+    r = TestClient(app).post("/api/dictamen", json={**CUERPO, "documentos": [adj, oferta]})
+    assert r.status_code == 200, r.text
+    assert r.json()["coherencia"] == [contradiccion], r.json()["coherencia"]
+    assert "4905511.43" in capturas["coherencia"] and "3905511.43" in capturas["coherencia"]
+    assert "CONTRADICCIONES ENTRE DOCUMENTOS" in capturas["user"]
+    assert "4.905.511,43" in capturas["user"]
+    print("OK contradicciones entre documentos: en la respuesta y en el Jurídico")
+
+
 if __name__ == "__main__":
     test_dictamen_con_jsons()
     test_validaciones()
     test_documento_incorrecto_no_cuenta()
+    test_hechos_llegan_al_juridico()
+    test_coherencia()

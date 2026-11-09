@@ -227,6 +227,30 @@ class HechosClave(BaseModel):
     nomenclatura_encontrada: str | None = None
     otros: list[str] = Field(default_factory=list)
 
+    def resumen_texto(self) -> str:
+        """Una línea con montos, plazos, partes y nomenclatura."""
+        partes: list[str] = []
+        if self.montos:
+            montos_txt = "; ".join(
+                (
+                    f"{m.etiqueta}={m.valor_num}"
+                    + (f" {m.moneda}" if m.moneda else "")
+                    + (f" ({m.texto})" if m.texto and m.valor_num is None else "")
+                ).strip()
+                for m in self.montos
+            )
+            partes.append(f"montos=[{montos_txt}]")
+        if self.plazos:
+            plazos_txt = "; ".join(f"{p.etiqueta}={p.texto}" for p in self.plazos)
+            partes.append(f"plazos=[{plazos_txt}]")
+        if self.partes:
+            partes.append(f"partes={self.partes}")
+        if self.nomenclatura_encontrada:
+            partes.append(f"nomenclatura={self.nomenclatura_encontrada}")
+        if self.otros:
+            partes.append(f"otros={self.otros}")
+        return "; ".join(partes) if partes else "(sin hechos clave)"
+
 
 class DocumentoAnalizado(BaseModel):
     """Resultado del análisis de un documento cargado a la sesión."""
@@ -264,6 +288,8 @@ class DictamenJuridico(BaseModel):
     slots_pendientes: list[TipoDocumento] = Field(default_factory=list)
     # Puntaje calculado por código (por documento, global, flag, hallazgo raíz).
     puntaje: dict | None = None
+    # Contradicciones entre documentos (montos, plazos, partes, nomenclatura).
+    coherencia: list[dict] = Field(default_factory=list)
 
 
 class SesionCompliance(BaseModel):
@@ -406,6 +432,7 @@ class DictamenExpedienteResponse(BaseModel):
     markdown: str
     puntaje: dict | None = None
     pendientes: list[TipoDocumento] = Field(default_factory=list)
+    coherencia: list[dict] = Field(default_factory=list)
 
 
 class JuridicoResponse(BaseModel):

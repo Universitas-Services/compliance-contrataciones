@@ -266,6 +266,8 @@ def construir_json_analista(
     preguntas: list[PreguntaSeguimiento] | None = None,
     tipo_documento: str | None = None,
     tipo_coincide: bool = True,
+    hechos_clave: dict | None = None,
+    observaciones: list[dict] | None = None,
 ) -> dict:
     """Parte 2 del formato Mariana (objeto estructurado).
 
@@ -322,6 +324,12 @@ def construir_json_analista(
             }
             for p in no_aplica
         ]
+    # Montos, plazos, partes y observaciones: el dictamen los cruza entre
+    # documentos, ya que el análisis sin estado no ve el resto del expediente.
+    if hechos_clave is not None:
+        out["hechos_clave"] = hechos_clave
+    if observaciones is not None:
+        out["observaciones"] = observaciones
     return out
 
 

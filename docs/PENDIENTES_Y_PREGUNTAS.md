@@ -1,8 +1,17 @@
 # Pendientes, decisiones y preguntas abiertas
 
-Actualizado: 16/10/2026. Estado: **éxito parcial**. El Analista evalúa los 12 documentos de CA Acto Único Apertura Única y el Jurídico redacta el dictamen (formato de Mariana) a partir del JSON de cada documento. El equipo legal validó el contenido del dictamen; falta cerrar formato, puntajes, persistencia y despliegue definitivo.
+Actualizado: 9/11/2026. Estado: **listo para integrar con Nest**. El Analista evalúa los 12 documentos de CA Acto Único Apertura Única y el Jurídico redacta el dictamen (formato de Mariana) a partir del JSON de cada documento. El agente ya no guarda estado: Nest conserva los JSON (contrato en `docs/API_DICTAMEN_NEST.md`). Aguanta 1000 análisis simultáneos con reintentos (prueba con Gemini simulado). Falta: respuestas del equipo legal (sección 1), integración de Nest (sección 3) y Contratación Directa.
 
-## 0. Estado al 21/10 y plan
+## 0. Estado al 9/11
+
+- **Cloud Run:** revisión `00027-225`. Concurrencia 10, máximo 10 instancias, afinidad de sesión, 8 análisis y 2 OCR por instancia, prioridad de Vertex tras un 429 (`LLM_PRIORIDAD_429=true`). Presupuesto de 50 USD/mes con avisos al 50, 90 y 100 % y al pronóstico.
+- **Rutas para Nest:** `POST /api/analizar` y `POST /api/dictamen`, ambas sin estado.
+- **Prioridad confirmada en facturación (9/11):** aparecen los SKU «Priority», a unos 13,50 USD por millón de tokens de salida frente a 7,50 del estándar. En la corrida del 9/11, un 429 se repitió también con prioridad y lo resolvió la espera de 10 y 20 s.
+- **Memoria entre documentos (9/11):** sin memoria, los resultados quedan dentro de la variación normal del modelo (detalle en la sección 5.1). Recomendación: mantener `POST /api/analizar` sin memoria.
+- **Costo del 5/11** (mediciones y prueba de carga): unos 2,9 USD brutos.
+- **Coherencia entre documentos (9/11, sin desplegar):** el `json_analista` lleva `hechos_clave` y `observaciones`; antes del dictamen, una llamada aparte (`verificar_coherencia`) busca contradicciones y el dictamen las incluye en la sección 3 y en el campo `coherencia`. Prueba: un monto alterado a propósito en la notificación a Ofilar se detectó en 3 de 3 corridas. En el expediente real encontró que el encabezado de 7 documentos dice CA-SDEDTEOEL-CA-001-2026 en vez de 002 (comprobado en los .docx), y que el acta de inicio fija 2 días para garantías frente a 5 hábiles en la adjudicación. Esos dos hallazgos aparecieron en 2 de 3 corridas: hay variación entre corridas.
+
+## 0.1 Estado al 21/10 y plan (referencia)
 
 **21/10:** respuestas de Mariana y Nancy integradas en la sección 1 (CAAUIR.18, no hay reglamento nuevo, entregable sin preguntas). Sigue sin respuesta el valor de «parcial» y «no consta» (se mantiene 0). OCR con Gemini de la LCP (Decreto 1.399) y el RLCP (Decreto 6.708) en curso para completar el basamento. Vertex `global` dio muchos 429 el 20 y el 21/10: configurar un modelo de respaldo antes de producción.
 
@@ -83,11 +92,15 @@ Preguntas originales (respondidas por la decisión; se conservan como referencia
 
 Acordado: el dictamen llega como Markdown (texto plano, sin tablas) y Nest genera el PDF solo al emitir el dictamen jurídico.
 
-Por decidir:
-1. **Contenido del Markdown para Nest:** a) dictamen + cobertura + conclusión + recomendaciones en el mismo texto (recomendado), o b) solo el dictamen, con las recomendaciones aparte en JSON.
-2. ¿Nest necesita un JSON resumen del dictamen (puntaje global, flag de nulidad, hallazgo raíz, pendientes) además del Markdown?
-3. ¿Usa el `json_analista` por documento? ¿Qué campos? (Hoy: estado, respuesta, evidencia, conformes, no_aplica, resumen.)
-4. Contrato de la API definitivo: con la opción A decidida, definir con Frank el endpoint del dictamen que recibe la lista de JSON (campos, tamaño y orden de los documentos).
+**Contrato entregado (5/11):** `docs/API_DICTAMEN_NEST.md`, escrito para el equipo de Nest (Edwards) y para su asistente de IA. Cubre flujo, campos, catálogos, errores, reintentos, modelo de datos y pruebas mínimas.
+
+Por decidir con Nest (sección 12 del contrato):
+1. ¿Nest ya tiene una cola de trabajos? La propuesta es que Nest haga las llamadas desde un proceso de fondo; así no hace falta cambiar el agente.
+2. ¿El usuario ve el `informe_markdown` de cada documento, o solo el dictamen?
+3. ¿La app usa `puntaje` (puntaje global, flag de nulidad, hallazgo raíz, pendientes) en pantallas, o solo el Markdown?
+4. ¿Hay documentos de más de 30 MB?
+
+Resuelto por el contrato: el Markdown es el dictamen completo; el `json_analista` se guarda y se reenvía sin cambios, y no se muestra al usuario final.
 
 ## 4. Técnico (nuestro lado)
 
@@ -101,7 +114,7 @@ Por decidir:
 - [x] Regla «discrepancia entre partes del documento = parcial, no si» (CAAUAI.3, CAAUPC.1).
 - [ ] Contratación Directa: cuestionarios en el formato nuevo. **Nancy no ha empezado (21/10)**; sin fecha.
 - [ ] Decidir qué hacer con `CONTEXTO_TRABAJO.md` (staged sin commit) y `revision_nancy/` (`.gitignore` o commit). `revision_nancy/corrida_2026-10-14/` guarda la corrida completa de referencia (informes, JSON, dictamen, `resumen.json`).
-- [ ] Opcional: script oficial en `scripts/` para correr el expediente completo con un comando (comparar versiones). Ayer se usó uno temporal fuera del repo.
+- [x] Script oficial para correr el expediente completo (9/11): `python -m scripts.correr_expediente MANIFIESTO SALIDA --modo con_memoria|sin_memoria` (gasta tokens) y `python -m scripts.comparar_corridas CARPETA_A CARPETA_B ...` para comparar pregunta por pregunta. Ojo: los imports cargan `.env`; la configuración de Cloud Run se fija después de importar.
 
 ## 5. GitHub y GCP
 
@@ -114,10 +127,10 @@ Por decidir:
    - Reiniciar o desplegar Cloud Run para que tome los `.md` nuevos (hay caché en memoria).
 4. **Variables de Cloud Run:** `LLM_PROVIDER=vertex`, `VERTEX_LOCATION=global`, `GEMINI_MODEL=google/gemini-3.8-flash` (ya sin `GEMINI_BASE_URL`), `KNOWLEDGE_SOURCE=gcs`, `GCS_BUCKET_CUESTIONARIOS`, `GCS_BUCKET_BASAMENTO`, `LLM_REASONING_EFFORT_RUBRICA=low`, `LLM_MAX_TOKENS_RUBRICA=8192`, `LLM_TEMPERATURE_RUBRICA=0.2`, `FERIADOS_EXTRA`, `LOG_LEVEL=INFO`, `MAX_UPLOAD_MB=30` (el informe de prueba pesaba 27,6 MB). Opcionales con valor por defecto en el código: `LLM_RUBRICA_LOTE_TAM=15`, `LLM_RUBRICA_LOTE_TAM_LARGO=10`, `LLM_MAX_TOKENS_IDENTIDAD=8192`.
 5. **Pruebas (14/10):** en Cloud Run se probaron el acta (40 s, 20.935 tokens con lotes de 15) y el pliego (66 s); los logs muestran la partición APLICA_A, `Rúbrica: N ítems en M lote(s)` y `finish_reason=stop` en todas las llamadas. El expediente completo se corrió en local con la configuración de Cloud Run (~328k tokens, 10,9 min); falta repetirlo en Cloud Run cuando haya sesiones persistentes (sección 2).
-6. **Estado al 19/10:** revisión `compliance-contrataciones-00014-r2m` (100 % del tráfico, desplegada el 16/10: el sandbox acumula los documentos en el mismo expediente con `sesion_id`), `VERTEX_LOCATION=global`, `GEMINI_MODEL=google/gemini-3.8-flash`, sin `GEMINI_BASE_URL`. Rollback: revisión 00013. En el bucket quedaron por error (inofensivos) `README.md` y 5 `.gitkeep`; decidir si se borran (lo ejecuta el usuario).
+6. **Estado al 9/11:** revisión `compliance-contrataciones-00027-225` (ver sección 0). **Estado al 19/10 (referencia):** revisión `compliance-contrataciones-00014-r2m` (100 % del tráfico, desplegada el 16/10: el sandbox acumula los documentos en el mismo expediente con `sesion_id`), `VERTEX_LOCATION=global`, `GEMINI_MODEL=google/gemini-3.8-flash`, sin `GEMINI_BASE_URL`. Rollback: revisión 00013. En el bucket quedaron por error (inofensivos) `README.md` y 5 `.gitkeep`; decidir si se borran (lo ejecuta el usuario).
 7. **Revisión del despliegue (14/10, pendiente antes de producción):**
    - Servicio público (`allUsers` + ingress `all`), protegido solo por `X-Agent-Key`: cuando Nest sea el único cliente, exigir también IAM (cuenta de servicio de Nest).
-   - Concurrencia 160 por instancia con `max-instances=1`: bajarla a 10–20 (análisis de ~45 s).
+   - [x] Concurrencia: 10 por instancia y máximo 10 instancias desde el 5/11.
    - `CORS_ORIGINS` solo admite el sandbox local: añadir el origen de Nest o dejarlo vacío si Nest llama de servidor a servidor.
    - `AGENT_CLIENT_NEST_KEY` sin configurar (solo existe la clave «laravel-testing»).
    - Despliegue manual desde la PC: definir el flujo (punto 2).
@@ -127,16 +140,21 @@ Por decidir:
 
 Objetivo: que el servicio nunca se caiga. Acepta, encola y procesa al ritmo que permita Gemini.
 
-- [x] **Fase 1, código (pendiente de commit y despliegue):** análisis en hilos, límite por instancia (`MAX_ANALISIS_CONCURRENTES`, 8 por defecto; 503 con `Retry-After`), `POST /api/analizar` sin estado y credenciales de Vertex seguras entre hilos. Prueba: `scripts/test_capacidad.py`.
-- [ ] **Fase 2, configuración de Cloud Run (en curso):** concurrencia 10, máximo 10 instancias y afinidad de sesión ya aplicados. Faltan la alerta de presupuesto y subir a 30–50 instancias después de la Fase 5.
+- [x] **Fase 1, código (desplegada el 5/11):** análisis en hilos, límite por instancia (`MAX_ANALISIS_CONCURRENTES`, 8 por defecto; 503 con `Retry-After`), `POST /api/analizar` sin estado y credenciales de Vertex seguras entre hilos. Prueba: `scripts/test_capacidad.py`.
+- [x] **Fase 2, configuración de Cloud Run (5/11):** concurrencia 10, máximo 10 instancias, afinidad de sesión y presupuesto de 50 USD/mes con avisos a `universitasdev@gmail.com`. Subir a 30 instancias con `--max` cuando Nest esté integrado y reintente.
 - **OCR en Cloud Run (5/11):** desde el 20/10 no funcionaba porque faltaba `libgl1` en la imagen; corregido. Con 8 escaneados a la vez la instancia superó los 2 GiB, por eso `MAX_OCR_CONCURRENTES=2`.
 - **Medición con 8 escaneados (5/11, revisión 00026):** sin caídas, memoria máxima 58 %, CPU 91 %, hasta 9 instancias. Un 429 de Gemini agotó los reintentos con casi nada de carga: es la prioridad de la Fase 4. Dos OCR de 15 páginas en una instancia tardaron de 4 a 9 minutos.
 - [ ] **Fase 3, cola:** propuesta del 5/11: proceso de fondo en Nest, sin cambios en el agente (ver `docs/API_DICTAMEN_NEST.md`). Falta acordarlo con Nest.
-- [ ] **Fase 4, Gemini:** modelo de respaldo, cuota y Provisioned Throughput.
+- [x] **Fase 4, Gemini (5/11):** tras un 429, reintento inmediato con Priority PayGo (`LLM_PRIORIDAD_429`), confirmado en facturación el 9/11. Descartados por ahora: modelo de respaldo (cambiaría resultados legales) y Provisioned Throughput (exige compra anticipada). Flex PayGo, 50 % más barato pero más lento, podría servir para trabajos sin prisa.
 - [x] **Fase 5, prueba de carga con Gemini simulado (5/11):** `scripts/carga/`. Con reintentos: 1000 de 1000 en 9 min (hasta 32 instancias, memoria 20 %, sin caídas); 999 de 1000 en 15 min con 10 instancias; 499 de 500 con 20 % de 429 simulados. Sin reintentos pasan solo unas 70 de 1000: Nest debe reintentar. No mide Gemini real ni OCR.
 - Para subir el máximo de instancias usar `--max` (tope del servicio); `--max-instances` solo cambia la revisión y el tope del servicio manda.
 
-Por decidir: `POST /api/analizar` no tiene la memoria entre documentos que sí tiene el sandbox (`_memoria_expediente`).
+**Memoria entre documentos (medido el 9/11):** `POST /api/analizar` no tiene la memoria del expediente que sí tiene el sandbox (`_memoria_expediente`). Se corrió el expediente de 12 documentos 2 veces con memoria y 2 sin memoria (`revision_nancy/memoria_2026-11-09/`):
+- Entre corridas del mismo modo cambian 6,6 % y 7,3 % de las 273 preguntas; entre modos, de 5,9 % a 8,1 %. La diferencia entre modos no supera la variación normal del modelo.
+- Puntaje global: 55,4 % y 56,3 % con memoria; 55,9 % y 57,0 % sin memoria. Hallazgo raíz CAAUAI.14 y flag de nulidad en las 4 corridas.
+- Solo 3 preguntas cambian igual en ambas corridas de cada modo: CAAUNA.10 y CAAUNA.11 (segunda notificación) pasan de «no consta» a «no», y CAAUPC.67 de «si» a «parcial». Sin memoria, el modelo marca «no» cuando la notificación omite los recursos; con memoria, «no consta». Afecta la lista de críticos, no el puntaje (ambos valen 0). Encaja con la pregunta abierta sobre «no consta» (sección 1).
+- Sin memoria gasta unos 11 % menos tokens (295 mil frente a 333 mil).
+- Recomendación (pendiente de confirmar por el usuario): mantener `POST /api/analizar` sin memoria. Limitación: es un solo expediente, y en este el flag ya estaba activo.
 
 Detectado de paso: `scripts/test_dupla_extraccion.py` ya fallaba antes de la Fase 1 (espera «JURÍDICO» en el prompt experto), y `.txt` pasa la validación de subida pero el extractor lo rechaza con 400.
 

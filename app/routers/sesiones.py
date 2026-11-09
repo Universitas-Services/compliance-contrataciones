@@ -403,27 +403,7 @@ def _parse_hechos_clave(raw: object) -> HechosClave:
 
 
 def _formatear_hechos_clave(hc: HechosClave) -> str:
-    partes: list[str] = []
-    if hc.montos:
-        montos_txt = "; ".join(
-            (
-                f"{m.etiqueta}={m.valor_num}"
-                + (f" {m.moneda}" if m.moneda else "")
-                + (f" ({m.texto})" if m.texto and m.valor_num is None else "")
-            ).strip()
-            for m in hc.montos
-        )
-        partes.append(f"montos=[{montos_txt}]")
-    if hc.plazos:
-        plazos_txt = "; ".join(f"{p.etiqueta}={p.texto}" for p in hc.plazos)
-        partes.append(f"plazos=[{plazos_txt}]")
-    if hc.partes:
-        partes.append(f"partes={hc.partes}")
-    if hc.nomenclatura_encontrada:
-        partes.append(f"nomenclatura={hc.nomenclatura_encontrada}")
-    if hc.otros:
-        partes.append(f"otros={hc.otros}")
-    return "; ".join(partes) if partes else "(sin hechos clave)"
+    return hc.resumen_texto()
 
 
 def _es_mismo_documento(d: DocumentoAnalizado, tipo: TipoDocumento, nombre: str) -> bool:
@@ -703,6 +683,7 @@ def _analizar_archivo(
     tipo_label = tipo_ct or (
         sesion.tipo_contratacion.value if sesion.tipo_contratacion else "N/D"
     )
+    hechos_clave = _parse_hechos_clave(analisis.get("hechos_clave"))
     json_analista = construir_json_analista(
         nombre_documento=nombre_seguro,
         tipo_contrato=tipo_label,
@@ -711,6 +692,12 @@ def _analizar_archivo(
         preguntas=preg_objs,
         tipo_documento=tipo.value,
         tipo_coincide=tipo_coincide,
+        hechos_clave=hechos_clave.model_dump(exclude_none=True),
+        observaciones=[
+            o.model_dump(exclude_none=True)
+            for o in observaciones
+            if o.severidad in {"critica", "advertencia"}
+        ],
     )
     informe_usuario = (
         construir_informe_usuario_markdown(
@@ -749,7 +736,7 @@ def _analizar_archivo(
         tipo_detectado=tipo_detectado,
         texto_extraido=texto_ext,
         extraccion=extraccion,
-        hechos_clave=_parse_hechos_clave(analisis.get("hechos_clave")),
+        hechos_clave=hechos_clave,
         estatus_global=estatus_global,  # type: ignore[arg-type]
     )
     sincronizar_informe_documento(documento)
