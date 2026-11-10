@@ -9,7 +9,7 @@ Actualizado: 9/11/2026. Estado: **listo para integrar con Nest**. El Analista ev
 - **Prioridad confirmada en facturación (9/11):** aparecen los SKU «Priority», a unos 13,50 USD por millón de tokens de salida frente a 7,50 del estándar. En la corrida del 9/11, un 429 se repitió también con prioridad y lo resolvió la espera de 10 y 20 s.
 - **Memoria entre documentos (9/11):** sin memoria, los resultados quedan dentro de la variación normal del modelo (detalle en la sección 5.1). Recomendación: mantener `POST /api/analizar` sin memoria.
 - **Costo del 5/11** (mediciones y prueba de carga): unos 2,9 USD brutos.
-- **Coherencia entre documentos (9/11, sin desplegar):** el `json_analista` lleva `hechos_clave` y `observaciones`; antes del dictamen, una llamada aparte (`verificar_coherencia`) busca contradicciones y el dictamen las incluye en la sección 3 y en el campo `coherencia`. Prueba: un monto alterado a propósito en la notificación a Ofilar se detectó en 3 de 3 corridas. En el expediente real encontró que el encabezado de 7 documentos dice CA-SDEDTEOEL-CA-001-2026 en vez de 002 (comprobado en los .docx), y que el acta de inicio fija 2 días para garantías frente a 5 hábiles en la adjudicación. Esos dos hallazgos aparecieron en 2 de 3 corridas: hay variación entre corridas.
+- **Coherencia entre documentos (9/11, sin desplegar):** el `json_analista` lleva `hechos_clave` y `observaciones`; antes del dictamen, una llamada aparte (`verificar_coherencia`) busca contradicciones y el dictamen las incluye en la sección 3 y en el campo `coherencia`. Prueba: un monto alterado a propósito en la notificación a Ofilar se detectó en 3 de 3 corridas. En el expediente real encontró que el encabezado de 7 documentos dice CA-SDEDTEOEL-CA-001-2026 en vez de 002 (comprobado en los .docx), y que el acta de inicio fija 2 días para garantías frente a 5 hábiles en la adjudicación. Esos dos hallazgos aparecieron en 2 de 3 corridas: hay variación entre corridas. **10/11:** la verificación corre 2 pasadas en paralelo y une los resultados (`LLM_PASADAS_COHERENCIA=2`): ambos hallazgos salieron en 3 de 3 corridas, sin duplicados.
 
 ## 0.1 Estado al 21/10 y plan (referencia)
 
@@ -132,7 +132,7 @@ Resuelto por el contrato: el Markdown es el dictamen completo; el `json_analista
    - Servicio público (`allUsers` + ingress `all`), protegido solo por `X-Agent-Key`: cuando Nest sea el único cliente, exigir también IAM (cuenta de servicio de Nest).
    - [x] Concurrencia: 10 por instancia y máximo 10 instancias desde el 5/11.
    - `CORS_ORIGINS` solo admite el sandbox local: añadir el origen de Nest o dejarlo vacío si Nest llama de servidor a servidor.
-   - `AGENT_CLIENT_NEST_KEY` sin configurar (solo existe la clave «laravel-testing»).
+   - `AGENT_CLIENT_NEST_KEY` sin configurar (solo existe la clave «laravel-testing»). Plan (10/11): crear la clave de Nest cuando Edwards conecte el backend; antes de producción, quitar «laravel-testing» de Cloud Run o cambiar su valor y dejarla solo para pruebas internas (el nombre «laravel» es histórico).
    - Despliegue manual desde la PC: definir el flujo (punto 2).
 8. Recordatorio: mientras no esté la BD (sección 2), las pruebas en Cloud Run deben subir los documentos y pedir el dictamen en la misma sesión y el mismo día.
 

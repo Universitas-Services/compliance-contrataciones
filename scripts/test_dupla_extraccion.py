@@ -23,7 +23,8 @@ def test_14_agentes() -> None:
         assert a.rol == RolAgente.ANALISTA
         assert j.rol == RolAgente.JURIDICO
         assert "ANALISTA" in a.system_prompt_experto().upper() or "Analista" in a.system_prompt_experto()
-        assert "JURÍDICO" in j.system_prompt_experto() or "JURIDICO" in j.system_prompt_experto().upper()
+        # «Agente Jurídico» o «revisión jurídica», según la modalidad; con o sin tilde.
+        assert any(x in j.system_prompt_experto().upper() for x in ("JURÍDIC", "JURIDIC"))
         assert m in ANALISTA_PROMPTS and m in JURIDICO_PROMPTS
     print("OK 14 agentes + prompts")
 

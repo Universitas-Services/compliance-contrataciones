@@ -8,6 +8,7 @@ import os
 import re
 import threading
 import time
+from concurrent.futures import ThreadPoolExecutor
 from contextvars import ContextVar
 from typing import Any
 
@@ -2171,6 +2172,35 @@ def verificar_coherencia(docs: list) -> list[dict]:
         '"gravedad": "alta"|"media", "explicacion": str}]}'
     )
     user = "Datos clave por documento:\n" + "\n".join(piezas)
+    # Dos pasadas en paralelo y se unen: una sola encontraba las contradicciones
+    # sutiles en 2 de cada 3 corridas (9/11).
+    with ThreadPoolExecutor(max_workers=_PASADAS_COHERENCIA) as ex:
+        pasadas = list(ex.map(lambda _: _una_pasada_coherencia(system, user), range(_PASADAS_COHERENCIA)))
+    # Una misma contradicción vuelve con otras palabras: se descarta si repite
+    # el dato (p. ej. «nomenclatura del procedimiento») o los mismos dos valores.
+    unidas: list[dict] = []
+    vistas: set = set()
+    for c in (c for p in pasadas for c in p):
+        claves = {
+            ("dato", _normalizar_valor(c["dato"])[:40]),
+            ("valores", frozenset({_normalizar_valor(c["valor_a"]), _normalizar_valor(c["valor_b"])})),
+        }
+        if claves & vistas:
+            continue
+        vistas |= claves
+        unidas.append(c)
+    return unidas
+
+
+_PASADAS_COHERENCIA = max(1, int(os.getenv("LLM_PASADAS_COHERENCIA", "2")))
+
+
+def _normalizar_valor(valor: str) -> str:
+    """Mismo dato escrito distinto («3.905.511,43 VES» y «3905511.43»): misma clave."""
+    return re.sub(r"[^0-9a-z]", "", str(valor).lower().replace("ves", "").replace("bs", ""))
+
+
+def _una_pasada_coherencia(system: str, user: str) -> list[dict]:
     data = None
     for _ in range(2):  # un reintento si el JSON llega cortado
         try:
