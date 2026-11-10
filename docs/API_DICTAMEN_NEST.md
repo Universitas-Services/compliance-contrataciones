@@ -1,16 +1,17 @@
 # Contrato de integración: Nest y agente de compliance
 
-Versión del 5/11/2026. Este documento es para el equipo de Nest y para cualquier asistente de IA que implemente la integración.
+Versión del 10/11/2026. Este documento es para el equipo de Nest y para cualquier asistente de IA que implemente la integración. Todo lo descrito aquí ya está desplegado en la URL de la sección 3.
 
 ## 1. Resumen
 
-El agente audita documentos de contrataciones públicas con Gemini. Tiene dos operaciones:
+El agente audita documentos de contrataciones públicas con Gemini. Tiene estas operaciones:
 
 | Operación | Ruta | Entrada | Salida |
 |---|---|---|---|
+| Leer los catálogos | `GET /api/catalogo` | Nada | Modalidades, tipos de contratación y checklist |
 | Analizar un documento | `POST /api/analizar` | Un archivo y sus datos | `json_analista` del documento |
-| Conversar (opcional) | `POST /api/conversar` | Mensaje, historial y estado del expediente | Respuesta y acciones |
-| Emitir el dictamen | `POST /api/dictamen` | Todos los `json_analista` del expediente | Dictamen en Markdown y puntaje |
+| Conversar | `POST /api/conversar` | Mensaje, historial y estado del expediente | Respuesta y acciones |
+| Emitir el dictamen | `POST /api/dictamen` | Todos los `json_analista` del expediente | Dictamen en Markdown, puntaje y contradicciones |
 
 **El agente no guarda nada.** Nest es dueño de los archivos, los JSON, los dictámenes y el estado del expediente.
 
@@ -39,10 +40,18 @@ Si eres un asistente de IA que implementa esta integración, cumple estas reglas
 | Variable sugerida en Nest | `COMPLIANCE_AGENT_KEY` |
 | Comprobar que el servicio responde | `GET /health`, sin clave |
 
-La clave se entrega por un canal seguro, fuera de este documento.
+### 3.1 La clave de Nest
+
+- **Qué es:** una clave propia de Nest (el agente la identifica como `nest-production`), distinta de la de pruebas. Se crea cuando el backend esté listo para conectarse y se entrega por un canal seguro, fuera de este documento.
+- **Dónde va:** solo en el servidor de Nest, en la variable `COMPLIANCE_AGENT_KEY` (o en su gestor de secretos). Nunca en el código, en el repositorio, en el navegador ni en una app móvil.
+- **Cómo se usa:** en cada llamada a `/api/...`, en el header `X-Agent-Key`. `GET /health` no la necesita.
+- **Logs:** no registrar el valor de la clave ni el header `X-Agent-Key`.
+- **Primera prueba:** `GET /api/catalogo` con la clave debe responder 200; sin clave o con una equivocada, 401.
+- **Si se cambia la clave** (por ejemplo, si se filtró): el agente deja de aceptar la anterior y Nest recibe 401 en todas las llamadas. Basta con actualizar la variable con el valor nuevo; no hace falta tocar código. Un 401 no se reintenta (sección 8): se avisa al equipo técnico.
 
 ## 4. Flujo completo
 
+0. Al crear un expediente, la app muestra el saludo y cada mensaje del usuario va a `POST /api/conversar` (sección 6.1), que registra los datos del expediente y guía la carga. Las modalidades y el checklist salen de `GET /api/catalogo`.
 1. El usuario sube un documento y elige su tipo.
 2. Nest guarda el archivo, crea un registro en estado `PENDIENTE` y responde de inmediato.
 3. Un proceso de fondo llama a `POST /api/analizar`, con los reintentos de la sección 8.
@@ -216,9 +225,9 @@ Respuesta 200:
 
 Un expediente de 12 documentos pesa unos 150 KB en JSON y tardó 83 s en la prueba del 5/11.
 
-## 6.1 `POST /api/conversar` (opcional)
+## 6.1 `POST /api/conversar`
 
-Chat con el Coordinador de Compliance, sin estado: Nest guarda la conversación y envía en cada mensaje el historial reciente y el estado del expediente. Responde en 5 a 15 segundos.
+Chat con el Coordinador de Compliance. **La app lo usa desde el inicio** (decidido el 10/11): el usuario conversa con el agente durante todo el expediente. Es sin estado: Nest guarda la conversación y envía en cada mensaje el historial reciente y el estado del expediente. Responde en 5 a 15 segundos.
 
 Petición:
 
@@ -431,10 +440,20 @@ Modelo sugerido; los nombres se pueden adaptar.
 |---|---|
 | `id`, `expediente_id` | Identificadores |
 | `estado` | `PENDIENTE`, `PROCESANDO`, `LISTO` o `ERROR` |
-| `alcance`, `markdown`, `puntaje`, `pendientes` | Campos de la respuesta |
+| `alcance`, `markdown`, `puntaje`, `pendientes`, `coherencia` | Campos de la respuesta |
 | `ruta_pdf` | PDF generado por Nest |
 
+**Conversación:** mensajes con `rol` (`usuario` o `agente`), texto y fecha, por expediente.
+
 Para el dictamen se envían los documentos en estado `ANALIZADO`, incluidos los que tienen `tipo_coincide: false`: el agente sabe no contarlos.
+
+Datos útiles para la pantalla de expedientes:
+
+| Columna | De dónde sale |
+|---|---|
+| Progreso | Tipos del checklist con al menos un documento `ANALIZADO` y `tipo_coincide: true`, sobre el total del checklist de `GET /api/catalogo` (por ejemplo, 9/12) |
+| Riesgo | Del último dictamen: `puntaje.global.rango` y `puntaje.flag_nulidad_absoluta`. Antes del primer dictamen, el peor `estatus_global` de los documentos |
+| Estado | Lo define Nest (por ejemplo, configurando, activo, cerrado). El agente no guarda estados |
 
 ## 11. Capacidad y límites
 
@@ -476,6 +495,8 @@ Esa prueba no incluyó Gemini real ni OCR. El límite real con muchos usuarios l
 - [ ] Reemplazar un documento sustituye su JSON.
 - [ ] `tipo_coincide: false` genera un aviso al usuario.
 - [ ] `json_analista` no se muestra al usuario final.
+- [ ] Las modalidades y el checklist se leen de `GET /api/catalogo`; solo se ofrecen las de `estado: disponible`.
+- [ ] Cada mensaje va a `/api/conversar`, se aplican sus `acciones` y se guarda la conversación.
 
 Pruebas mínimas antes de producción:
 

@@ -380,7 +380,7 @@ async function recibirTexto(texto) {
   await guardarExpediente(e);
   pintar();
   await pintarLista();
-  if (dictamen) await solicitarDictamen(dictamen.forzar_final);
+  if (dictamen) await solicitarDictamen(dictamen.forzar_final, true);
 }
 
 async function elegirModalidad(valor) {
@@ -462,7 +462,7 @@ async function subirArchivo(archivo, tipo) {
     if (!d.tipo_coincide) {
       agregar("agente",
         `Este archivo no parece ser «${nombreTipo(e, tipo)}»` +
-        (d.tipo_detectado ? ` (parece ${d.tipo_detectado})` : "") +
+        (d.tipo_detectado ? ` (parece ${nombreTipo(e, d.tipo_detectado)})` : "") +
         ". No cuenta para el checklist: súbelo en la casilla correcta o sube el documento que corresponde.",
         { clase: "aviso" });
     }
@@ -488,14 +488,15 @@ async function omitir(tipo) {
   await pedirSiguiente();
 }
 
-async function solicitarDictamen(forzarFinal) {
+async function solicitarDictamen(forzarFinal, desdeChat = false) {
   const e = expediente;
   const documentos = e.documentos.filter((d) => d.estado === "ANALIZADO").map((d) => d.json_analista);
   if (!documentos.length) {
     await decir("Primero necesito al menos un documento analizado.");
     return;
   }
-  agregar("usuario", forzarFinal ? "Solicito el dictamen final." : "Solicito el dictamen.");
+  // Pedido por chat: el usuario ya lo escribió con sus palabras.
+  if (!desdeChat) agregar("usuario", forzarFinal ? "Solicito el dictamen final." : "Solicito el dictamen.");
   agregar("agente", "Generando el dictamen jurídico. Suele tardar de 1 a 2 minutos…", { clase: "progreso" });
   const progreso = e.mensajes[e.mensajes.length - 1];
   await guardarExpediente(e);
