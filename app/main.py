@@ -19,7 +19,7 @@ from fastapi.staticfiles import StaticFiles
 
 from app.core.gateway_auth import docs_enabled, verify_gateway
 from app.core.security import SecurityHeadersMiddleware, cors_origins
-from app.routers import analisis, dictamen, sesiones
+from app.routers import analisis, catalogo, conversar, dictamen, sesiones
 
 # Sin esto los logger.info de `app.*` no salen bajo uvicorn (solo WARNING+).
 logging.getLogger("app").setLevel(os.getenv("LOG_LEVEL", "INFO").upper())
@@ -71,6 +71,16 @@ app.include_router(
     dependencies=[Depends(verify_gateway)],
 )
 app.include_router(
+    conversar.router,
+    prefix="/api",
+    dependencies=[Depends(verify_gateway)],
+)
+app.include_router(
+    catalogo.router,
+    prefix="/api",
+    dependencies=[Depends(verify_gateway)],
+)
+app.include_router(
     analisis.router,
     prefix="/api",
     dependencies=[Depends(verify_gateway)],
@@ -111,3 +121,12 @@ def sandbox_index():
     if not index.is_file():
         return {"detail": "Sandbox no disponible (falta sandbox/index.html)."}
     return FileResponse(index)
+
+
+@app.get("/sandbox/clasico")
+def sandbox_clasico():
+    """Sandbox anterior (rutas con sesión en el servidor), para pruebas internas."""
+    pagina = _SANDBOX_DIR / "clasico.html"
+    if not pagina.is_file():
+        return {"detail": "Sandbox clásico no disponible."}
+    return FileResponse(pagina)

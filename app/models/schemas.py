@@ -413,6 +413,39 @@ class AnalisisSinEstadoResponse(BaseModel):
     metricas: MetricasAnalisis | None = None
 
 
+class MensajeConversacion(BaseModel):
+    rol: Literal["usuario", "agente"]
+    texto: str = Field(max_length=8000)
+
+
+class ExpedienteConversacion(BaseModel):
+    """Estado del expediente que guarda el cliente (Nest o el sandbox)."""
+
+    nomenclatura: str | None = None
+    nombre: str | None = None
+    modalidad: Modalidad | None = None
+    tipo_contratacion: TipoContratacion | None = None
+    # `json_analista` de los documentos ya analizados, sin modificar.
+    documentos: list[dict] = Field(default_factory=list)
+    dictamenes: int = 0
+
+
+class ConversarRequest(BaseModel):
+    """Chat sin estado: el cliente envía el historial y el estado del expediente."""
+
+    usuario_nombre: str | None = None
+    ente: str | None = None
+    expediente: ExpedienteConversacion = Field(default_factory=ExpedienteConversacion)
+    historial: list[MensajeConversacion] = Field(default_factory=list, max_length=60)
+    mensaje: str = Field(min_length=1, max_length=4000)
+
+
+class ConversarResponse(BaseModel):
+    respuesta: str
+    # Cambios que el cliente aplica: fijar_expediente, pedir_documento, solicitar_dictamen.
+    acciones: list[dict] = Field(default_factory=list)
+
+
 class DictamenExpedienteRequest(BaseModel):
     """Dictamen sin estado: Nest envía los `json_analista` del expediente."""
 

@@ -1966,6 +1966,177 @@ def _basamento_juridico(
     )
 
 
+def _resumen_documentos_chat(documentos: list[dict], *, max_hallazgos: int = 6) -> str:
+    """Estado y hallazgos principales de cada documento, sin el texto de las preguntas."""
+    from app.agents.knowledge import etiqueta_documento
+
+    lineas = []
+    for js in documentos:
+        try:
+            etiqueta = etiqueta_documento(TipoDocumento(js.get("tipo_documento")))
+        except ValueError:
+            etiqueta = str(js.get("tipo_documento"))
+        cab = (
+            f"- {etiqueta} ({js.get('documento_evaluado')}): estatus={js.get('estatus_global')}"
+            + ("" if js.get("tipo_coincide", True) else " | NO corresponde al tipo declarado")
+        )
+        res = js.get("resumen") or {}
+        if res:
+            cab += f" | conformes={res.get('conformes')} hallazgos={res.get('hallazgos')}"
+        lineas.append(cab)
+        orden = {"no": 0, "parcial": 1, "no_consta": 2}
+        hallazgos = sorted(
+            js.get("hallazgos") or [],
+            key=lambda h: (orden.get(str(h.get("estado")), 3), -(_peso_texto(h.get("rango_criticidad")))),
+        )
+        for h in hallazgos[:max_hallazgos]:
+            lineas.append(
+                f"    · {h.get('codigo_pregunta')} [{h.get('estado')}, {h.get('rango_criticidad')}]: "
+                f"{_recorte(h.get('respuesta'), 220)}"
+            )
+    return "\n".join(lineas) if lineas else "(aún no hay documentos analizados)"
+
+
+def _peso_texto(rango: object) -> int:
+    m = re.search(r"(\d)", str(rango or ""))
+    return int(m.group(1)) if m else 0
+
+
+def conversar(
+    *,
+    usuario_nombre: str | None,
+    ente: str | None,
+    expediente: dict,
+    historial: list[dict],
+    mensaje: str,
+) -> dict:
+    """Chat sin estado del Coordinador de Compliance.
+
+    Devuelve {"respuesta": str, "acciones": [...]}; el cliente guarda el estado y
+    aplica las acciones (fijar_expediente, pedir_documento, solicitar_dictamen).
+    """
+    from app.agents.knowledge import etiqueta_documento, etiqueta_modalidad
+    from app.agents.modalities import get_modalidad_agent
+    from app.models.schemas import TipoContratacion
+
+    mapeo = "\n".join(f"- {etiqueta_modalidad(m)} → {m.value}" for m in Modalidad)
+    modalidad = expediente.get("modalidad")
+    checklist_txt = "(se define al elegir la modalidad)"
+    if modalidad:
+        validos = {
+            js.get("tipo_documento")
+            for js in expediente.get("documentos") or []
+            if js.get("tipo_coincide", True)
+        }
+        slots = get_modalidad_agent(Modalidad(modalidad), TipoContratacion.BIENES).obtener_checklist()
+        checklist_txt = "\n".join(
+            f"- {s.tipo_documento.value} ({s.descripcion or etiqueta_documento(s.tipo_documento)}): "
+            + ("analizado" if s.tipo_documento.value in validos else "pendiente")
+            for s in slots
+        )
+    system = (
+        f"{_ORQUESTADOR_IDENTIDAD}\n"
+        f"{_DOMINIO_COMPLIANCE}\n"
+        "Conversas con el usuario por chat. Tu misión: registrar el expediente "
+        "(número o nomenclatura, nombre, modalidad y tipo de contratación), guiarlo "
+        "para subir los documentos del checklist en orden, explicar los resultados "
+        "y ofrecer el dictamen cuando corresponda.\n"
+        f"Usuario: {usuario_nombre or 'sin nombre'}; ente: {ente or 'sin ente'}. "
+        "Trátalo por su nombre de vez en cuando, sin exagerar.\n"
+        f"Modalidades (códigos para el JSON, nunca en la respuesta):\n{mapeo}\n"
+        "Tipos: BIENES, OBRAS, SERVICIOS.\n"
+        "REGLAS:\n"
+        "- Los archivos se suben con el botón de adjuntar de la pantalla; tú no "
+        "recibes archivos por el chat. Cuando toque, pide el documento por su nombre.\n"
+        "- Para explicar un resultado usa solo los hallazgos del bloque DOCUMENTOS: "
+        "explica en palabras simples qué falló y por qué importa. No copies el texto "
+        "de las preguntas del cuestionario.\n"
+        "- No inventes resultados, montos ni artículos.\n"
+        "- Si el usuario pide el dictamen, devuelve la acción solicitar_dictamen; "
+        "si faltan documentos, avísale que será parcial.\n"
+        "- Respuesta breve: 1 a 4 frases, salvo que pida una explicación.\n"
+        "- Escribe en español con ortografía correcta, incluidas las tildes.\n"
+        "SOLO JSON, sin texto fuera del JSON:\n"
+        '{"respuesta": str, "acciones": [ '
+        '{"accion": "fijar_expediente", "nomenclatura": str|null, "nombre": str|null, '
+        '"modalidad": CODIGO|null, "tipo_contratacion": BIENES|OBRAS|SERVICIOS|null} | '
+        '{"accion": "pedir_documento", "tipo_documento": CODIGO_DEL_CHECKLIST} | '
+        '{"accion": "solicitar_dictamen", "forzar_final": bool} ]}\n'
+        "Incluye en fijar_expediente solo los datos que el usuario dio en este mensaje."
+    )
+    historial_txt = "\n".join(
+        f"{'Usuario' if m.get('rol') == 'usuario' else 'Coordinador'}: {_recorte(m.get('texto'), 1200)}"
+        for m in historial[-20:]
+    )
+    kb = ""
+    if _es_pregunta_normativa(mensaje):
+        kb = "\n" + _bloque_basamento(mensaje, limite_chars=3_500) + "\n"
+    user = (
+        "EXPEDIENTE: "
+        f"nomenclatura={expediente.get('nomenclatura')!r}, nombre={expediente.get('nombre')!r}, "
+        f"modalidad={modalidad!r}, tipo={expediente.get('tipo_contratacion')!r}, "
+        f"dictámenes emitidos={expediente.get('dictamenes') or 0}.\n"
+        f"CHECKLIST:\n{checklist_txt}\n"
+        f"DOCUMENTOS:\n{_resumen_documentos_chat(expediente.get('documentos') or [])}\n"
+        f"{kb}\n"
+        f"HISTORIAL:\n{historial_txt or '(vacío)'}\n\n"
+        f"Usuario: {mensaje}"
+    )
+    data = None
+    for _ in range(2):
+        try:
+            raw = _llamar_modelo(
+                system=system, user_content=user, max_tokens=4096, reasoning_effort="low"
+            )
+            data = _limpiar_y_parsear_json(raw)
+            break
+        except (json.JSONDecodeError, TypeError, ValueError) as exc:
+            logger.warning("conversar: respuesta inválida (%s)", exc)
+    if not isinstance(data, dict):
+        return {
+            "respuesta": "Disculpa, no pude procesar tu mensaje. ¿Puedes repetirlo?",
+            "acciones": [],
+        }
+    return {
+        "respuesta": _texto_plano_chat(str(data.get("respuesta") or "")),
+        "acciones": _acciones_validas(data.get("acciones"), modalidad),
+    }
+
+
+def _texto_plano_chat(texto: str) -> str:
+    return re.sub(r"\*\*(.+?)\*\*", r"\1", texto).replace("**", "").strip()
+
+
+def _acciones_validas(acciones: object, modalidad_actual: str | None) -> list[dict]:
+    """Descarta acciones mal formadas o con códigos fuera de catálogo."""
+    from app.models.schemas import TipoContratacion
+
+    salida: list[dict] = []
+    modalidades = {m.value for m in Modalidad}
+    tipos = {t.value for t in TipoContratacion}
+    documentos = {t.value for t in TipoDocumento}
+    for a in acciones if isinstance(acciones, list) else []:
+        if not isinstance(a, dict):
+            continue
+        nombre = a.get("accion")
+        if nombre == "fijar_expediente":
+            limpio = {"accion": nombre}
+            for campo in ("nomenclatura", "nombre"):
+                if a.get(campo):
+                    limpio[campo] = str(a[campo]).strip()[:200]
+            if a.get("modalidad") in modalidades:
+                limpio["modalidad"] = a["modalidad"]
+            if a.get("tipo_contratacion") in tipos:
+                limpio["tipo_contratacion"] = a["tipo_contratacion"]
+            if len(limpio) > 1:
+                salida.append(limpio)
+        elif nombre == "pedir_documento" and a.get("tipo_documento") in documentos:
+            salida.append({"accion": nombre, "tipo_documento": a["tipo_documento"]})
+        elif nombre == "solicitar_dictamen":
+            salida.append({"accion": nombre, "forzar_final": bool(a.get("forzar_final"))})
+    return salida
+
+
 def verificar_coherencia(docs: list) -> list[dict]:
     """Contradicciones de montos, plazos, partes o nomenclatura entre documentos.
 

@@ -9,6 +9,7 @@ El agente audita documentos de contrataciones públicas con Gemini. Tiene dos op
 | Operación | Ruta | Entrada | Salida |
 |---|---|---|---|
 | Analizar un documento | `POST /api/analizar` | Un archivo y sus datos | `json_analista` del documento |
+| Conversar (opcional) | `POST /api/conversar` | Mensaje, historial y estado del expediente | Respuesta y acciones |
 | Emitir el dictamen | `POST /api/dictamen` | Todos los `json_analista` del expediente | Dictamen en Markdown y puntaje |
 
 **El agente no guarda nada.** Nest es dueño de los archivos, los JSON, los dictámenes y el estado del expediente.
@@ -215,9 +216,73 @@ Respuesta 200:
 
 Un expediente de 12 documentos pesa unos 150 KB en JSON y tardó 83 s en la prueba del 5/11.
 
+## 6.1 `POST /api/conversar` (opcional)
+
+Chat con el Coordinador de Compliance, sin estado: Nest guarda la conversación y envía en cada mensaje el historial reciente y el estado del expediente. Responde en 5 a 15 segundos.
+
+Petición:
+
+```json
+{
+  "usuario_nombre": "Carlos Pérez",
+  "ente": "Alcaldía del Municipio Iribarren",
+  "expediente": {
+    "nomenclatura": "CA-SDEDTEOEL-CA-002-2026",
+    "nombre": "Adquisición de insumos tecnológicos",
+    "modalidad": "CA_ACTO_UNICO_APERTURA_UNICA",
+    "tipo_contratacion": "BIENES",
+    "documentos": [],
+    "dictamenes": 0
+  },
+  "historial": [{"rol": "agente", "texto": "Hola, Carlos..."}, {"rol": "usuario", "texto": "..."}],
+  "mensaje": "¿Por qué salió rojo el acta de inicio?"
+}
+```
+
+- `expediente.documentos`: los `json_analista` ya analizados, sin modificar. El agente los usa para explicar resultados.
+- Los campos del expediente pueden ir en `null` mientras el usuario no los haya dado.
+- `historial`: hasta 60 mensajes; el agente usa los últimos 20.
+
+Respuesta:
+
+```json
+{
+  "respuesta": "Registré el expediente CA-ALC-IRI-007-2026. ¿Cuál es la modalidad?",
+  "acciones": [
+    {"accion": "fijar_expediente", "nomenclatura": "CA-ALC-IRI-007-2026", "nombre": "Compra de mobiliario escolar"},
+    {"accion": "pedir_documento", "tipo_documento": "ACTIVIDADES_PREVIAS"},
+    {"accion": "solicitar_dictamen", "forzar_final": false}
+  ]
+}
+```
+
+| Acción | Qué hace Nest |
+|---|---|
+| `fijar_expediente` | Guarda los campos que trae (nomenclatura, nombre, modalidad, tipo_contratacion) |
+| `pedir_documento` | Muestra el botón para subir ese tipo de documento |
+| `solicitar_dictamen` | Lanza `POST /api/dictamen` como en la sección 6 |
+
+El agente solo devuelve códigos de los catálogos; las acciones mal formadas se descartan antes de responder. Los archivos se suben siempre con `POST /api/analizar`: el chat no recibe archivos. Si el usuario pregunta algo ajeno a contrataciones públicas, el agente lo rechaza con amabilidad.
+
 ## 7. Catálogos
 
-Los valores se envían exactamente como aparecen aquí.
+Los valores se envían exactamente como aparecen aquí. También se pueden leer del agente con `GET /api/catalogo` (con `X-Agent-Key`), que devuelve:
+
+```json
+{
+  "modalidades": [
+    {
+      "valor": "CA_ACTO_UNICO_APERTURA_UNICA",
+      "nombre": "Concurso Abierto - Acto Único Apertura Única",
+      "estado": "disponible",
+      "checklist": [{"tipo_documento": "ACTIVIDADES_PREVIAS", "nombre": "Actividades Previas"}]
+    }
+  ],
+  "tipos_contratacion": [{"valor": "BIENES", "nombre": "Bienes"}]
+}
+```
+
+`estado` es `disponible`, `sin_validar` (tiene cuestionarios sin revisión legal) o `sin_cuestionarios` (no usar). El `checklist` viene en el orden en que se piden los documentos.
 
 ### 7.1 `modalidad`
 
