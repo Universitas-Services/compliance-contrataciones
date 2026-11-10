@@ -2,9 +2,36 @@
 
 Versión del 10/11/2026. Este documento es para el equipo de Nest y para cualquier asistente de IA que implemente la integración. Todo lo descrito aquí ya está desplegado en la URL de la sección 3.
 
-## 1. Resumen
+## 1. Qué es el agente
 
-El agente audita documentos de contrataciones públicas con Gemini. Tiene estas operaciones:
+El agente de compliance audita expedientes de **contrataciones públicas venezolanas** (LCP, RLCP, Normas SUNAI y leyes relacionadas). Lo usa un funcionario de un ente público (por ejemplo, una alcaldía) para revisar, documento por documento, si un procedimiento de compra cumple la ley, y para obtener al final un dictamen jurídico.
+
+Por dentro trabaja con tres roles, pero el usuario solo ve uno, el «Coordinador de Compliance»:
+
+- **Coordinador (chat):** conversa con el usuario, registra los datos del expediente, le pide los documentos en orden y le explica los resultados. Responde dudas de contrataciones públicas y rechaza temas ajenos.
+- **Analista:** revisa cada documento con el cuestionario de su tipo (decenas de preguntas con su peso legal) y devuelve los hallazgos y un semáforo.
+- **Jurídico:** con todos los documentos analizados, calcula el puntaje, busca contradicciones entre documentos y redacta el dictamen.
+
+El agente usa Gemini por dentro. Nest no llama a Gemini: solo llama a las rutas de este contrato.
+
+### 1.1 Glosario
+
+| Término | Qué es |
+|---|---|
+| Ente | Organismo público dueño del expediente (alcaldía, gobernación, servicio desconcentrado…) |
+| Expediente | Un procedimiento de contratación completo, identificado por su nomenclatura (por ejemplo, `CA-SDEDTEOEL-CA-002-2026`) |
+| Modalidad | Tipo de procedimiento: concurso abierto, consulta de precios, contratación directa… Define qué documentos se piden |
+| Tipo de contratación | Bienes, obras o servicios. Cambia algunas preguntas del cuestionario |
+| Checklist | Lista ordenada de los documentos que exige la modalidad (12 en Concurso Abierto Acto Único Apertura Única) |
+| `json_analista` | Resultado del análisis de un documento: hallazgos, conformes, datos clave. Es interno: lo guarda Nest y lo reenvía, pero no se le muestra al usuario |
+| Semáforo (`estatus_global`) | Verde, Amarillo o Rojo para cada documento |
+| Hallazgo | Algo que no cumple o no consta en el documento, con su gravedad |
+| Dictamen | Informe jurídico final en Markdown. **Parcial** si faltan documentos, **Final** si están todos |
+| Contradicción (`coherencia`) | Un mismo dato que difiere entre documentos (monto, fecha, nomenclatura, adjudicatario) |
+
+### 1.2 Resumen de las rutas
+
+Tiene estas operaciones:
 
 | Operación | Ruta | Entrada | Salida |
 |---|---|---|---|
@@ -30,6 +57,9 @@ Si eres un asistente de IA que implementa esta integración, cumple estas reglas
 7. No llames a `/api/sesiones`. Esas rutas son del sandbox interno.
 8. No inventes campos, códigos ni valores. Si algo no está en este documento, pregunta.
 9. Lee la clave de una variable de entorno. No la escribas en el código ni en los logs.
+10. Sigue el flujo de la sección 4: el saludo y los mensajes de estado del chat los genera Nest; las respuestas a lo que escribe el usuario, `/api/conversar`.
+11. Aplica solo las `acciones` de `/api/conversar` que trae la respuesta; no deduzcas otras del texto.
+12. Filtra siempre por ente: un usuario solo ve los expedientes de su ente. El agente no lo controla.
 
 ## 3. Conexión
 
@@ -51,16 +81,38 @@ Si eres un asistente de IA que implementa esta integración, cumple estas reglas
 
 ## 4. Flujo completo
 
-0. Al crear un expediente, la app muestra el saludo y cada mensaje del usuario va a `POST /api/conversar` (sección 6.1), que registra los datos del expediente y guía la carga. Las modalidades y el checklist salen de `GET /api/catalogo`.
-1. El usuario sube un documento y elige su tipo.
-2. Nest guarda el archivo, crea un registro en estado `PENDIENTE` y responde de inmediato.
-3. Un proceso de fondo llama a `POST /api/analizar`, con los reintentos de la sección 8.
-4. Nest guarda el resultado y pasa el registro a `ANALIZADO`, o a `RECHAZADO` si el archivo no sirve.
-5. La app avisa al usuario.
-6. Cuando el usuario pide el dictamen, otro trabajo de fondo envía los JSON a `POST /api/dictamen`.
-7. Nest guarda el Markdown, genera el PDF y avisa al usuario.
+La pantalla principal de un expediente es un chat con el Coordinador, más la lista de documentos del checklist. Así funciona de principio a fin (el sandbox interno del agente hace exactamente esto):
 
-El dictamen se puede pedir antes de tener todos los documentos: sale como informe `PARCIAL` e indica los pendientes.
+**A. Inicio de sesión y lista de expedientes**
+
+1. El usuario entra a la app con su cuenta. Nest sabe su nombre y su ente.
+2. Nest muestra solo los expedientes de ese ente, con su progreso y riesgo (sección 10).
+3. Al abrir la app, Nest pide una vez `GET /api/catalogo` y lo guarda en memoria: modalidades, tipos y checklists.
+
+**B. Registro del expediente (chat)**
+
+4. El usuario crea un expediente. Nest muestra un saludo fijo, sin llamar al agente. Texto sugerido: «Hola, {nombre}. Soy el Coordinador de Compliance de Contrataciones de {ente}. Te acompaño a auditar un expediente documento por documento. Para empezar, ¿cuál es el número del expediente y cómo se llama?».
+5. Cada mensaje del usuario va a `POST /api/conversar` con el historial y el estado del expediente. Nest muestra la `respuesta` y aplica las `acciones`: con `fijar_expediente` guarda nomenclatura, nombre, modalidad o tipo.
+6. Opcional: mientras falten la modalidad o el tipo, Nest puede mostrar botones con las opciones del catálogo (solo modalidades `disponible`). Al tocar uno, Nest guarda el dato directamente, sin llamar al agente.
+
+**C. Carga y análisis de documentos**
+
+7. Con el expediente registrado, Nest muestra el botón para subir el siguiente documento: el primero del checklist que aún no tenga un documento `ANALIZADO` con `tipo_coincide: true`. Si `/api/conversar` devolvió `pedir_documento`, se usa ese tipo.
+8. El usuario sube el archivo. Nest lo guarda, crea el documento en estado `PENDIENTE`, agrega al chat un mensaje del usuario («Subí acta.pdf como Acta de Inicio») y responde de inmediato.
+9. Un proceso de fondo llama a `POST /api/analizar`, con los reintentos de la sección 8. Mientras tanto, el documento está en `PROCESANDO` y el chat muestra «Analizando…».
+10. Al terminar, Nest guarda el `json_analista` y el informe, pasa el documento a `ANALIZADO` y agrega al chat un mensaje del agente con el semáforo y un enlace al informe. Si `tipo_coincide` es `false`, agrega un aviso de que el archivo no corresponde. Si respondió 400, 413 o 415, lo pasa a `RECHAZADO` y muestra el motivo (`detail`).
+11. Nest pide el siguiente documento (paso 7). El usuario puede preguntar en cualquier momento por el chat, por ejemplo «¿por qué salió rojo el acta?»: el agente responde con los `json_analista` que recibe en `expediente.documentos`.
+
+**D. Dictamen**
+
+12. El usuario pide el dictamen con un botón o por el chat (acción `solicitar_dictamen`). Si faltan documentos, sale `PARCIAL`; el usuario puede pedir el `FINAL` de todas formas con `forzar_final: true`.
+13. Un proceso de fondo envía todos los `json_analista` a `POST /api/dictamen`. Nest guarda la respuesta, genera el PDF a partir del Markdown y agrega al chat un mensaje del agente con el puntaje global, las contradicciones (`coherencia`) y el enlace al dictamen.
+
+**E. Historial**
+
+14. Todo queda guardado en Nest: conversación, archivos, análisis y dictámenes. Si el usuario vuelve otro día, el expediente se abre igual que lo dejó y sigue donde quedó.
+
+Los mensajes del chat que genera Nest (saludo, «Subí…», «Analizando…», resultado del análisis o del dictamen) se guardan en el historial como los demás, y se envían a `/api/conversar` en los mensajes siguientes. Así el agente sabe qué pasó.
 
 ## 5. `POST /api/analizar`
 
@@ -270,6 +322,8 @@ Respuesta:
 | `fijar_expediente` | Guarda los campos que trae (nomenclatura, nombre, modalidad, tipo_contratacion) |
 | `pedir_documento` | Muestra el botón para subir ese tipo de documento |
 | `solicitar_dictamen` | Lanza `POST /api/dictamen` como en la sección 6 |
+
+Errores: los mismos de la sección 8 (401, 422, 429, 502, 503). Como el usuario está esperando la respuesta, conviene un tiempo de espera de 60 segundos y, si falla, mostrar «No pude responder, intenta de nuevo» en vez de reintentar varios minutos.
 
 El agente solo devuelve códigos de los catálogos; las acciones mal formadas se descartan antes de responder. Los archivos se suben siempre con `POST /api/analizar`: el chat no recibe archivos. Si el usuario pregunta algo ajeno a contrataciones públicas, el agente lo rechaza con amabilidad.
 
