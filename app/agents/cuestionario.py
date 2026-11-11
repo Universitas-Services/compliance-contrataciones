@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 import re
 
+from app.agents.codigos import mostrar_codigos, quitar_codigos
 from app.agents.knowledge.cuestionarios_loader import cita_corta_fundamento
 from app.models.schemas import (
     DocumentoAnalizado,
@@ -362,6 +363,7 @@ def construir_informe_usuario_markdown(
     Sin N/A, sin emojis, sin listar el texto completo de cada pregunta.
     El fundamento se muestra abreviado; el JSON estructurado conserva el detalle.
     """
+    con_codigos = mostrar_codigos()
     aplicables = [p for p in preguntas if (p.estado or "").lower() != "na"]
     aciertos = [p for p in aplicables if (p.estado or "").lower() == "si"]
     hallazgos = [
@@ -402,7 +404,7 @@ def construir_informe_usuario_markdown(
         for p in aciertos[:5]:
             cod = p.codigo_pregunta or p.id
             breve = _recortar_en_palabra((p.respuesta or "conforme").strip().rstrip("."), 120)
-            ejemplos.append(f"{cod} ({breve})")
+            ejemplos.append(f"{cod} ({breve})" if con_codigos else breve)
         extra = ""
         n_extra = len(aciertos) - 5
         if n_extra > 0:
@@ -445,7 +447,7 @@ def construir_informe_usuario_markdown(
             cuerpo = cuerpo.rstrip(".")
             fund = fund.rstrip(".")
             bloque = (
-                f"Hallazgo {i} ({cod}, criticidad {crit}): se observa "
+                f"Hallazgo {i} ({cod + ', ' if con_codigos else ''}criticidad {crit}): se observa "
                 f"{grado}. {cuerpo}{'' if cuerpo.endswith('…') else '.'}"
             )
             if fund:
@@ -470,7 +472,7 @@ def construir_informe_usuario_markdown(
         "el dictamen jurídico del expediente podrá integrar estos hallazgos "
         "con el resto de las piezas del procedimiento."
     )
-    return "\n\n".join(partes).rstrip() + "\n"
+    return quitar_codigos("\n\n".join(partes).rstrip()) + "\n"
 
 
 def resumen_rubrica_chat(doc: DocumentoAnalizado) -> str:

@@ -6,6 +6,7 @@ import re
 import uuid
 from datetime import datetime
 
+from app.agents.codigos import REGLA_SIN_CODIGOS, mostrar_codigos, quitar_codigos
 from app.agents.knowledge import (
     etiqueta_documento,
     etiqueta_modalidad,
@@ -419,7 +420,8 @@ def ejecutar_dictamen_juridico(
     juridico = get_agente(sesion.modalidad, sesion.tipo_contratacion, RolAgente.JURIDICO)
     markdown = consultar_juridico(
         sesion,
-        system_experto=juridico.system_prompt_experto(),
+        system_experto=juridico.system_prompt_experto()
+        + ("" if mostrar_codigos() else REGLA_SIN_CODIGOS),
         mensaje_usuario=mensaje,
         documento_ids=[d.id for d in docs] if documento_ids else None,
         slots_pendientes=[p.value for p in pendientes],
@@ -427,6 +429,7 @@ def ejecutar_dictamen_juridico(
         resultados=bloque_resultados(puntaje, etiquetas=etiquetas),
         coherencia=bloque_coherencia(contradicciones),
     )
+    markdown = quitar_codigos(markdown)
 
     dictamen = DictamenJuridico(
         id=str(uuid.uuid4()),

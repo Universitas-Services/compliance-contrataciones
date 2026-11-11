@@ -179,7 +179,7 @@ Respuesta 200:
 | Campo | Qué hacer con él |
 |---|---|
 | `json_analista` | Guardarlo completo. Se envía después al dictamen. Incluye `hechos_clave` (montos, plazos, partes y nomenclatura) y `observaciones`, que el dictamen usa para comparar documentos |
-| `informe_markdown` | Informe del documento. Guardarlo; mostrarlo o no al usuario está por decidir (sección 12) |
+| `informe_markdown` | Informe del documento. No muestra códigos de pregunta. Guardarlo; mostrarlo o no al usuario está por decidir (sección 12) |
 | `estatus_global` | `Verde`, `Amarillo` o `Rojo`. Sirve para mostrar el estado en la app |
 | `tipo_coincide` | Si es `false`, el archivo no corresponde al tipo declarado (sección 9) |
 | `tipo_detectado` | Tipo que el agente cree que es, si no coincide. Puede ser `null` |
@@ -270,7 +270,7 @@ Respuesta 200:
 | Campo | Qué hacer con él |
 |---|---|
 | `alcance` | `PARCIAL` o `FINAL` |
-| `markdown` | El entregable. Guardarlo y convertirlo a PDF. No trae tablas |
+| `markdown` | El entregable. Guardarlo y convertirlo a PDF. No trae tablas ni códigos de pregunta (los códigos solo van en los campos de datos, como `puntaje.hallazgo_raiz.codigo_pregunta`) |
 | `puntaje` | Datos calculados por código. Guardarlo; se puede usar en pantallas de la app |
 | `pendientes` | Tipos de documento que faltan |
 | `coherencia` | Contradicciones entre documentos: montos, fechas, partes o nomenclatura. Lista vacía si no hay. También aparecen en el Markdown. Opcional mostrarlas en la app |
@@ -325,7 +325,7 @@ Respuesta:
 
 Errores: los mismos de la sección 8 (401, 422, 429, 502, 503). Como el usuario está esperando la respuesta, conviene un tiempo de espera de 60 segundos y, si falla, mostrar «No pude responder, intenta de nuevo» en vez de reintentar varios minutos.
 
-El agente solo devuelve códigos de los catálogos; las acciones mal formadas se descartan antes de responder. Los archivos se suben siempre con `POST /api/analizar`: el chat no recibe archivos. Si el usuario pregunta algo ajeno a contrataciones públicas, el agente lo rechaza con amabilidad.
+El agente solo devuelve códigos de los catálogos; las acciones mal formadas se descartan antes de responder. `pedir_documento` solo trae tipos del checklist de la modalidad, y en el mensaje que completa el registro la respuesta siempre incluye `pedir_documento` con el primer documento pendiente. Los archivos se suben siempre con `POST /api/analizar`: el chat no recibe archivos. Si el usuario pregunta algo ajeno a contrataciones públicas, el agente lo rechaza con amabilidad.
 
 ## 7. Catálogos
 
@@ -380,7 +380,7 @@ Son 12 tipos, en este orden:
 11. `NOTIFICACION_NO_ADJUDICADOS`
 12. `CONTRATO`
 
-Un tipo puede tener varios archivos. Por ejemplo, cada oferta se analiza por separado con `OFERTAS`.
+Un tipo puede tener varios archivos. Por ejemplo, cada oferta se analiza por separado con `OFERTAS`, y cada notificación con `NOTIFICACION_ADJUDICADOS` o `NOTIFICACION_NO_ADJUDICADOS`. Todos los `json_analista` que se envíen al dictamen cuentan.
 
 ### 7.4 Formatos de archivo
 

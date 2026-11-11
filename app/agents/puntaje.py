@@ -287,6 +287,7 @@ def bloque_resultados(px: PuntajeExpediente, *, etiquetas: dict[str, str] | None
         lineas.append(
             f"Hallazgo Raíz (primer «no» crítico en la fase más temprana): "
             f"{r['codigo_pregunta']} en {etiquetas.get(r['tipo_documento'], r['tipo_documento'])}."
+            + (f" Hecho: {str(r['respuesta'])[:300]}" if r.get("respuesta") else "")
         )
     else:
         lineas.append(
