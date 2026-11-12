@@ -2021,9 +2021,6 @@ def conversar(
     from app.models.schemas import TipoContratacion
 
     mapeo = "\n".join(f"- {etiqueta_modalidad(m)} → {m.value}" for m in Modalidad)
-    primeros = "\n".join(
-        f"- {m.value}: {_primer_documento(m.value)[1]}" for m in Modalidad if _primer_documento(m.value)
-    )
     modalidad = expediente.get("modalidad")
     checklist_txt = "(se define al elegir la modalidad)"
     if modalidad:
@@ -2042,22 +2039,29 @@ def conversar(
         f"{_ORQUESTADOR_IDENTIDAD}\n"
         f"{_DOMINIO_COMPLIANCE}\n"
         "Conversas con el usuario por chat. Tu misión: registrar el expediente "
-        "(número o nomenclatura, nombre, modalidad y tipo de contratación), guiarlo "
-        "para subir los documentos del checklist en orden, explicar los resultados "
-        "y ofrecer el dictamen cuando corresponda.\n"
-        f"Usuario: {usuario_nombre or 'sin nombre'}; ente: {ente or 'sin ente'}. "
-        "Trátalo por su nombre de vez en cuando, sin exagerar.\n"
+        "(nomenclatura, modalidad y tipo de contratación), explicar los resultados "
+        "de los documentos y ofrecer el dictamen cuando corresponda. El usuario "
+        "decide qué documentos sube y en qué orden.\n"
+        f"Usuario: {usuario_nombre or 'sin nombre'}; ente de su cuenta: {ente or 'sin ente'}. "
+        "El expediente puede ser de ese ente, de otro organismo o de una empresa: "
+        "no lo cuestiones. Trátalo por su nombre de vez en cuando, sin exagerar.\n"
         f"Modalidades (códigos para el JSON, nunca en la respuesta):\n{mapeo}\n"
         "Tipos: BIENES, OBRAS, SERVICIOS.\n"
         "REGLAS:\n"
-        "- Los archivos se suben con el botón de adjuntar de la pantalla; tú no "
-        "recibes archivos por el chat. Cuando toque, pide el documento por su nombre.\n"
-        "- Pide SOLO documentos del CHECKLIST, en su orden, y cada vez que pidas uno "
-        "emite la acción pedir_documento con su código. Nunca pidas documentos que "
-        "no estén en el checklist.\n"
-        "- Si la modalidad se fija en este mensaje, el checklist aún no aparece abajo: "
-        "el primer documento que debes pedir es el de esta lista según la modalidad:\n"
-        f"{primeros}\n"
+        "- Registro: pide solo los datos que falten en EXPEDIENTE (nomenclatura, "
+        "modalidad, tipo), de uno en uno. Si un dato ya tiene valor, no lo "
+        "preguntes ni lo confirmes de nuevo. No preguntes el nombre ni la "
+        "descripción del proceso; si el usuario lo menciona, guárdalo en "
+        "fijar_expediente.nombre.\n"
+        "- Cuando el registro quede completo, confírmalo y dile que ya puede "
+        "cargar los documentos del expediente en el orden que prefiera con el "
+        "botón de carga de la pantalla. No le digas cuál subir primero.\n"
+        "- Los archivos se suben con el botón de carga de la pantalla; tú no "
+        "recibes archivos por el chat.\n"
+        "- No le indiques al usuario qué documento subir ni cuál sigue. Solo si "
+        "pregunta qué le falta o cuál conviene subir, responde con los pendientes "
+        "del CHECKLIST y, si sugieres uno, emite pedir_documento con su código. "
+        "Nunca menciones documentos que no estén en el checklist.\n"
         "- Para explicar un resultado usa solo los hallazgos del bloque DOCUMENTOS: "
         "explica en palabras simples qué falló y por qué importa. No copies el texto "
         "de las preguntas del cuestionario.\n"
@@ -2111,34 +2115,12 @@ def conversar(
         _acciones_validas(data.get("acciones"), modalidad), expediente
     )
     respuesta = _texto_plano_chat(str(data.get("respuesta") or ""))
-    # Que el texto nombre el mismo documento que la acción pedir_documento.
-    for a in acciones:
-        if a["accion"] == "pedir_documento":
-            nombre = etiqueta_documento(TipoDocumento(a["tipo_documento"]))
-            if nombre.lower() not in respuesta.lower():
-                respuesta = f"{respuesta} El documento que corresponde subir ahora es: {nombre}.".strip()
     return {"respuesta": respuesta, "acciones": acciones}
 
 
-def _primer_documento(modalidad: str | None, ya: set | None = None) -> tuple[str, str] | None:
-    """(código, nombre) del primer documento pendiente del checklist de la modalidad."""
-    from app.agents.knowledge import etiqueta_documento
-    from app.agents.modalities import get_modalidad_agent
-    from app.models.schemas import TipoContratacion
-
-    try:
-        slots = get_modalidad_agent(Modalidad(modalidad), TipoContratacion.BIENES).obtener_checklist()
-    except (ValueError, KeyError, TypeError):
-        return None
-    for s in slots:
-        if s.tipo_documento.value not in (ya or set()):
-            return s.tipo_documento.value, s.descripcion or etiqueta_documento(s.tipo_documento)
-    return None
-
-
 def _ajustar_pedir_documento(acciones: list[dict], expediente: dict) -> list[dict]:
-    """pedir_documento solo con documentos del checklist; al completar el registro,
-    garantiza que se pida el primer pendiente aunque el modelo no lo haya emitido."""
+    """pedir_documento solo con documentos del checklist, y nunca en el mensaje que
+    completa el registro: el usuario elige qué documento sube."""
     from app.agents.modalities import get_modalidad_agent
     from app.models.schemas import TipoContratacion
 
@@ -2151,25 +2133,14 @@ def _ajustar_pedir_documento(acciones: list[dict], expediente: dict) -> list[dic
         }
     except (ValueError, KeyError, TypeError):
         checklist = set()
-    salida = [
-        a for a in acciones
-        if a.get("accion") != "pedir_documento" or a.get("tipo_documento") in checklist
-    ]
     campos = ("nomenclatura", "modalidad", "tipo_contratacion")
     completo_antes = all(expediente.get(k) for k in campos)
-    completo_ahora = all(fijar.get(k) or expediente.get(k) for k in campos)
-    if fijar and completo_ahora and not completo_antes and not any(
-        a.get("accion") == "pedir_documento" for a in salida
-    ):
-        ya = {
-            js.get("tipo_documento")
-            for js in expediente.get("documentos") or []
-            if js.get("tipo_coincide", True)
-        }
-        primero = _primer_documento(modalidad, ya)
-        if primero:
-            salida.append({"accion": "pedir_documento", "tipo_documento": primero[0]})
-    return salida
+    registro_en_curso = bool(fijar) and not completo_antes
+    return [
+        a for a in acciones
+        if a.get("accion") != "pedir_documento"
+        or (a.get("tipo_documento") in checklist and not registro_en_curso)
+    ]
 
 
 def _texto_plano_chat(texto: str) -> str:

@@ -247,13 +247,6 @@ function cubierto(e, tipo) {
   return e.documentos.some((d) => d.tipo === tipo && d.estado === "ANALIZADO" && d.tipo_coincide);
 }
 
-function siguienteTipo(e) {
-  const m = modalidadDe(e);
-  if (!m) return null;
-  const s = m.checklist.find((x) => !cubierto(e, x.tipo_documento) && !e.omitidos.includes(x.tipo_documento));
-  return s ? s.tipo_documento : null;
-}
-
 function pendientes(e) {
   const m = modalidadDe(e);
   return m ? m.checklist.filter((x) => !cubierto(e, x.tipo_documento)) : [];
@@ -272,24 +265,9 @@ async function decir(texto, extra) {
 }
 
 function saludo() {
-  return `Hola, ${usuario.nombre}. Soy el Coordinador de Compliance de Contrataciones de ${usuario.ente}. ` +
+  return `Hola, ${usuario.nombre}. Soy el Coordinador de Compliance de Contrataciones. ` +
     "Te acompaño a auditar un expediente documento por documento, y puedes preguntarme lo que necesites en el camino.\n\n" +
-    "Para empezar, ¿cuál es el número del expediente y cómo se llama? Por ejemplo: CA-SDEDTEOEL-CA-002-2026, adquisición de insumos tecnológicos.";
-}
-
-async function pedirSiguiente() {
-  const e = expediente;
-  const tipo = siguienteTipo(e);
-  if (tipo) {
-    const m = modalidadDe(e);
-    const i = m.checklist.findIndex((x) => x.tipo_documento === tipo) + 1;
-    await decir(`Sube el documento «${nombreTipo(e, tipo)}» (${i} de ${m.checklist.length}).`);
-  } else {
-    const faltan = pendientes(e);
-    await decir(faltan.length
-      ? `Ya pasamos por todo el checklist; faltan ${faltan.length} documento(s). Puedes subirlos desde la lista de la derecha o solicitar un dictamen parcial.`
-      : "Ya están analizados todos los documentos del checklist. Puedes solicitar el dictamen final.");
-  }
+    "Para empezar, ¿cuál es la nomenclatura del expediente? Por ejemplo: CA-SDEDTEOEL-CA-002-2026.";
 }
 
 // ---------- Flujo guiado ----------
@@ -305,7 +283,6 @@ async function nuevoExpediente() {
     nombre: "",
     modalidad: "",
     tipo_contratacion: "",
-    omitidos: [],
     documentos: [],
     dictamenes: [],
     mensajes: [],
@@ -402,8 +379,8 @@ async function elegirTipo(valor) {
   e.tipo_contratacion = valor;
   actualizarPaso(e);
   const m = modalidadDe(e);
-  await decir(`Perfecto: ${m.nombre}, ${t.nombre.toLowerCase()}. El checklist tiene ${m.checklist.length} documentos; te los iré pidiendo en orden.`);
-  await pedirSiguiente();
+  await decir(`Perfecto: ${m.nombre}, ${t.nombre.toLowerCase()}. El checklist tiene ${m.checklist.length} documentos; ` +
+    "ya puedes cargarlos en el orden que prefieras desde la lista de la derecha.");
 }
 
 let tipoParaSubir = null;
@@ -424,7 +401,6 @@ async function subirArchivo(archivo, tipo) {
     fecha: new Date().toISOString(),
   };
   e.documentos.push(doc);
-  e.omitidos = e.omitidos.filter((t) => t !== tipo);
   if (e.sugerido === tipo) e.sugerido = null;
   await guardarOriginal(e, archivo);
   agregar("usuario", `Subí «${archivo.name}» como ${nombreTipo(e, tipo)}.`);
@@ -456,14 +432,14 @@ async function subirArchivo(archivo, tipo) {
       tipo_coincide: d.tipo_coincide,
       tipo_detectado: d.tipo_detectado,
     });
-    agregar("agente", `Listo el informe del analista para «${archivo.name}».`, {
+    agregar("agente", `Listo el resumen de «${archivo.name}». Puedes verlo y descargarlo.`, {
       tipo: "informe", doc_id: doc.id,
     });
     if (!d.tipo_coincide) {
       agregar("agente",
         `Este archivo no parece ser «${nombreTipo(e, tipo)}»` +
         (d.tipo_detectado ? ` (parece ${nombreTipo(e, d.tipo_detectado)})` : "") +
-        ". No cuenta para el checklist: súbelo en la casilla correcta o sube el documento que corresponde.",
+        ". No cuenta para el checklist: súbelo en la casilla correcta.",
         { clase: "aviso" });
     }
   } else if (res.definitivo && [400, 413, 415].includes(res.status)) {
@@ -476,16 +452,8 @@ async function subirArchivo(archivo, tipo) {
     });
   }
   await guardarExpediente(e);
-  if (doc.estado === "ANALIZADO") await pedirSiguiente(); else pintar();
+  pintar();
   await pintarLista();
-}
-
-async function omitir(tipo) {
-  const e = expediente;
-  e.omitidos.push(tipo);
-  agregar("usuario", `Omito «${nombreTipo(e, tipo)}» por ahora.`);
-  await guardarExpediente(e);
-  await pedirSiguiente();
 }
 
 async function solicitarDictamen(forzarFinal, desdeChat = false) {
@@ -566,7 +534,7 @@ function pintarMensaje(m) {
     if (d) {
       caja.append(el("div", { class: "fila" },
         chipDocumento(d),
-        el("button", { class: "ligero", type: "button", onclick: () => verInforme(d) }, "Ver informe")));
+        el("button", { class: "ligero", type: "button", onclick: () => verInforme(d) }, "Ver resumen")));
     }
   }
   if (m.tipo === "dictamen") {
@@ -598,7 +566,7 @@ function pintarAcciones() {
   $("form-texto").hidden = !e || ocupado;
   if (!e || ocupado) return;
   $("in-texto").placeholder = e.paso === "nomenclatura"
-    ? "Escribe el número y el nombre del expediente, o pregúntame lo que necesites"
+    ? "Escribe la nomenclatura del expediente, o pregúntame lo que necesites"
     : "Escribe tu mensaje";
   $("in-texto").focus();
 
@@ -620,11 +588,9 @@ function pintarAcciones() {
       el("button", { class: "ligero", type: "button", onclick: () => elegirTipo(t.valor) }, t.nombre)));
     return;
   }
-  const tipo = e.sugerido || siguienteTipo(e);
-  if (tipo) {
-    cont.append(
-      el("button", { type: "button", onclick: () => abrirSelector(tipo) }, `Subir ${nombreTipo(e, tipo)}`),
-      el("button", { class: "ligero", type: "button", onclick: () => omitir(tipo) }, "Omitir por ahora"));
+  if (e.sugerido) {
+    cont.append(el("button", { type: "button", onclick: () => abrirSelector(e.sugerido) },
+      `Subir ${nombreTipo(e, e.sugerido)}`));
   }
   const ultimo = e.documentos[e.documentos.length - 1];
   if (ultimo && ultimo.estado === "ANALIZADO") {
@@ -651,12 +617,10 @@ function pintarChecklist() {
     ? [e.nomenclatura, e.nombre, m && m.nombre, e.tipo_contratacion].filter(Boolean).join(" · ")
     : "";
   if (!m) return;
-  const sig = siguienteTipo(e);
   m.checklist.forEach((s) => {
     const docs = e.documentos.filter((d) => d.tipo === s.tipo_documento);
     const ultimo = docs[docs.length - 1];
-    let chip = estadoChip(e.omitidos.includes(s.tipo_documento) ? "Omitido" : "Pendiente",
-      e.omitidos.includes(s.tipo_documento) ? "omitido" : "pendiente");
+    let chip = estadoChip("Pendiente", "pendiente");
     if (cubierto(e, s.tipo_documento)) {
       const peor = docs.filter((d) => d.estado === "ANALIZADO" && d.tipo_coincide)
         .map((d) => d.estatus_global).sort((a, b) => "RojoAmarilloVerde".indexOf(a) - "RojoAmarilloVerde".indexOf(b))[0];
@@ -667,11 +631,11 @@ function pintarChecklist() {
     const archivos = el("div", { class: "archivos" });
     docs.filter((d) => d.estado === "ANALIZADO").forEach((d, i) => {
       if (i) archivos.append(", ");
-      archivos.append(el("a", { onclick: () => verInforme(d), title: "Ver informe" }, d.archivo));
+      archivos.append(el("a", { onclick: () => verInforme(d), title: "Ver resumen" }, d.archivo));
     });
     const subir = el("button", { class: "ligero", type: "button", onclick: () => abrirSelector(s.tipo_documento) }, "Subir");
     subir.disabled = ocupado || e.paso !== "documentos";
-    lista.append(el("li", { class: s.tipo_documento === sig ? "siguiente" : "" },
+    lista.append(el("li", { class: s.tipo_documento === e.sugerido ? "siguiente" : "" },
       el("span", null, s.nombre, " ", chip), subir, docs.length ? archivos : null));
   });
 }
@@ -746,7 +710,7 @@ function abrirVisor(titulo, markdown, archivo) {
 }
 
 function verInforme(d) {
-  abrirVisor(`Informe del analista: ${d.archivo}`, d.informe_markdown, `informe_${d.archivo}.md`);
+  abrirVisor(`Resumen: ${d.archivo}`, d.informe_markdown, `resumen_${d.archivo}.md`);
 }
 
 function verDictamen(dic) {

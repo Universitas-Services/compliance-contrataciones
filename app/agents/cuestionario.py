@@ -4,17 +4,24 @@ from __future__ import annotations
 
 import logging
 import re
+from datetime import datetime, timedelta, timezone
 
 from app.agents.codigos import mostrar_codigos, quitar_codigos
 from app.agents.knowledge.cuestionarios_loader import cita_corta_fundamento
 from app.models.schemas import (
     DocumentoAnalizado,
     HallazgoAnalista,
+    Modalidad,
     PreguntaSeguimiento,
     SesionCompliance,
+    TipoContratacion,
+    TipoDocumento,
 )
 
 logger = logging.getLogger(__name__)
+
+# Venezuela no usa horario de verano desde 2016.
+_HORA_VENEZUELA = timezone(timedelta(hours=-4))
 
 _QA_SECTION = "## Rúbrica del documento (Analista)"
 _QA_SECTION_ALT = "## Respuestas de seguimiento / cuestionario"
@@ -473,6 +480,40 @@ def construir_informe_usuario_markdown(
         "con el resto de las piezas del procedimiento."
     )
     return quitar_codigos("\n\n".join(partes).rstrip()) + "\n"
+
+
+def informe_documento_descargable(
+    cuerpo: str,
+    *,
+    nomenclatura: str,
+    modalidad: Modalidad,
+    tipo_contratacion: TipoContratacion,
+    tipo_documento: TipoDocumento,
+    nombre_archivo: str,
+    estatus_global: str,
+    fecha: datetime,
+) -> str:
+    """Resumen de un documento con título y datos del expediente, para descargarlo solo."""
+    from app.agents.knowledge import (
+        etiqueta_documento,
+        etiqueta_modalidad,
+        etiqueta_tipo_contratacion,
+    )
+
+    fecha_local = fecha.astimezone(_HORA_VENEZUELA).strftime("%d/%m/%Y")
+    cuerpo = re.sub(r"^#\s+", "## ", (cuerpo or "").strip())
+    return (
+        f"# Resumen de revisión: {etiqueta_documento(tipo_documento)}\n\n"
+        f"- **Expediente:** {nomenclatura}\n"
+        f"- **Modalidad:** {etiqueta_modalidad(modalidad)}\n"
+        f"- **Tipo de contratación:** {etiqueta_tipo_contratacion(tipo_contratacion)}\n"
+        f"- **Documento evaluado:** {nombre_archivo}\n"
+        f"- **Tipo de documento:** {etiqueta_documento(tipo_documento)}\n"
+        f"- **Fecha de revisión:** {fecha_local}\n"
+        f"- **Estatus:** {estatus_global}\n\n"
+        f"## Resultado de la revisión\n\n"
+        f"{cuerpo}\n"
+    )
 
 
 def resumen_rubrica_chat(doc: DocumentoAnalizado) -> str:

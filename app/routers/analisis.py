@@ -7,6 +7,7 @@ from datetime import datetime, timezone
 
 from fastapi import APIRouter, File, Form, UploadFile
 
+from app.agents.cuestionario import informe_documento_descargable
 from app.agents.modalities import get_modalidad_agent
 from app.models.schemas import (
     AnalisisSinEstadoResponse,
@@ -41,9 +42,19 @@ async def analizar(
 
     def procesar(ruta: str, nombre: str) -> AnalisisSinEstadoResponse:
         documento = _analizar_archivo(sesion, tipo_documento, ruta, nombre)
+        informe = informe_documento_descargable(
+            documento.informe_markdown or "",
+            nomenclatura=nomenclatura,
+            modalidad=modalidad,
+            tipo_contratacion=tipo_contratacion,
+            tipo_documento=tipo_documento,
+            nombre_archivo=documento.nombre_archivo,
+            estatus_global=documento.estatus_global or "Amarillo",
+            fecha=documento.fecha_analisis,
+        )
         return AnalisisSinEstadoResponse(
             json_analista=documento.json_analista,
-            informe_markdown=documento.informe_markdown or "",
+            informe_markdown=informe,
             estatus_global=documento.estatus_global,
             tipo_coincide=documento.tipo_coincide,
             tipo_detectado=documento.tipo_detectado,
