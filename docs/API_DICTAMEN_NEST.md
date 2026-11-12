@@ -1,16 +1,18 @@
 # Contrato de integración: Nest y agente de compliance
 
-Versión del 12/11/2026. Este documento es para el equipo de Nest y para cualquier asistente de IA que implemente la integración. Lo marcado como **(desde el 12/11)** se acordó en la reunión del 12/11 y entra en el próximo despliegue del agente; el resto ya está desplegado en la URL de la sección 3.
+Versión del 12/11/2026. Este documento es para el equipo de Nest y para cualquier asistente de IA que implemente la integración. Todo lo descrito aquí ya está desplegado en la URL de la sección 3 (revisión `compliance-contrataciones-00032-zs6`, del 12/11). Lo marcado como **(desde el 12/11)** se acordó en la reunión de ese día: la parte del agente ya está en producción y la parte de Nest está pendiente.
 
 ### Cambios respecto a la versión del 10/11
 
-| Cambio | Quién lo hace |
-|---|---|
-| El usuario descarga tres documentos: el resumen de cada documento evaluado, el dictamen parcial y el dictamen final (sección 4.1) | Agente: el resumen por documento pasa a ser un documento completo, con título y datos del expediente. Nest: guardarlo, generar su PDF y ofrecer la descarga |
-| El saludo pide «la nomenclatura del expediente», sin «número y nombre» (paso 4) | Nest |
-| El agente no le dice al usuario qué documento subir: el usuario elige el tipo y el orden (pasos 7 y 11, sección 6.1) | Agente: deja de pedir el siguiente documento. Nest: el botón de carga permite elegir cualquier tipo del checklist |
-| El chat ya no pregunta el nombre del proceso. Si el usuario lo menciona, llega en `fijar_expediente.nombre` | Agente |
-| La cuenta de un ente puede auditar procesos de otros organismos o de empresas. La visibilidad de expedientes por cuenta se mantiene (regla 12) | Nest. El agente nunca restringió por ente |
+Ningún cambio rompe la integración: las rutas, los campos de entrada y la forma de los JSON de respuesta son los mismos. Lo que cambia es el comportamiento del chat, el contenido de `informe_markdown` y lo que muestra la app.
+
+| Cambio | Agente (ya desplegado) | Nest (pendiente) |
+|---|---|---|
+| El usuario descarga tres documentos: el resumen de cada documento evaluado, el dictamen parcial y el dictamen final (sección 4.1) | `informe_markdown` trae título y datos del expediente | Guardar el resumen, generar su PDF y ofrecer la descarga. Guardar cada dictamen como registro aparte |
+| El saludo pide «la nomenclatura del expediente», sin «número y nombre» (paso 4) | — | Cambiar el texto del saludo fijo |
+| El usuario elige qué documento subir y en qué orden (pasos 7 y 11, sección 6.1) | El chat ya no pide el siguiente documento; `pedir_documento` solo llega si el usuario pregunta qué le falta | El botón de carga permite elegir cualquier tipo del checklist. No depender de `pedir_documento` para mostrarlo |
+| El chat ya no pregunta el nombre del proceso. Si el usuario lo menciona, llega en `fijar_expediente.nombre` | Hecho | `nombre` pasa a ser opcional |
+| La cuenta de un ente puede auditar procesos de otros organismos o de empresas (regla 12) | Nunca restringió por ente | Mantener el filtro de la lista de expedientes por ente, sin limitar qué se audita |
 
 ## 1. Qué es el agente
 
