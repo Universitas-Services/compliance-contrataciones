@@ -6,6 +6,7 @@ from fastapi import APIRouter
 
 from app.core.llm_client import conversar
 from app.models.schemas import ConversarRequest, ConversarResponse
+from app.routers.catalogo import modalidades_disponibles
 from app.routers.sesiones import _LLM_ERRORS, _http_from_llm
 
 router = APIRouter(prefix="/conversar", tags=["conversar"])
@@ -20,6 +21,7 @@ def conversar_ruta(body: ConversarRequest) -> ConversarResponse:
             expediente=body.expediente.model_dump(mode="json"),
             historial=[m.model_dump() for m in body.historial],
             mensaje=body.mensaje,
+            modalidades_habilitadas=body.modalidades_habilitadas or modalidades_disponibles(),
         )
     except _LLM_ERRORS as exc:
         raise _http_from_llm(exc) from exc

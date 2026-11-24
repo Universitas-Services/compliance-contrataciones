@@ -437,6 +437,8 @@ class ConversarRequest(BaseModel):
     ente: str | None = None
     expediente: ExpedienteConversacion = Field(default_factory=ExpedienteConversacion)
     historial: list[MensajeConversacion] = Field(default_factory=list, max_length=60)
+    # Modalidades que la app ofrece; sin este campo, las «disponible» del catálogo.
+    modalidades_habilitadas: list[Modalidad] | None = None
     mensaje: str = Field(min_length=1, max_length=4000)
 
 

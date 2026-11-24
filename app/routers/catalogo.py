@@ -34,6 +34,10 @@ def _estado(modalidad: Modalidad) -> str:
     return "sin_cuestionarios"
 
 
+def modalidades_disponibles() -> list[Modalidad]:
+    return [m for m in Modalidad if _estado(m) == "disponible"]
+
+
 @lru_cache(maxsize=1)
 def _catalogo() -> dict:
     modalidades = []

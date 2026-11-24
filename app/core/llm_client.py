@@ -2010,6 +2010,7 @@ def conversar(
     expediente: dict,
     historial: list[dict],
     mensaje: str,
+    modalidades_habilitadas: list[Modalidad] | None = None,
 ) -> dict:
     """Chat sin estado del Coordinador de Compliance.
 
@@ -2020,7 +2021,8 @@ def conversar(
     from app.agents.modalities import get_modalidad_agent
     from app.models.schemas import TipoContratacion
 
-    mapeo = "\n".join(f"- {etiqueta_modalidad(m)} → {m.value}" for m in Modalidad)
+    habilitadas = list(modalidades_habilitadas or Modalidad)
+    mapeo = "\n".join(f"- {etiqueta_modalidad(m)} → {m.value}" for m in habilitadas)
     modalidad = expediente.get("modalidad")
     checklist_txt = "(se define al elegir la modalidad)"
     siguiente_txt = "(se define al elegir la modalidad)"
@@ -2056,6 +2058,9 @@ def conversar(
         f"Modalidades (códigos para el JSON, nunca en la respuesta):\n{mapeo}\n"
         "Tipos: BIENES, OBRAS, SERVICIOS.\n"
         "REGLAS:\n"
+        "- Si el usuario pide una modalidad que no está en la lista, dile que por "
+        "ahora no está disponible en la app y ofrécele las de la lista; no la "
+        "registres. Si EXPEDIENTE ya tiene modalidad, sigue con ella.\n"
         "- Registro: pide solo los datos que falten en EXPEDIENTE (número de "
         "expediente, modalidad, tipo), de uno en uno. Al usuario llámalo siempre "
         "«número de expediente», nunca «nomenclatura» (en el JSON el campo sigue "
@@ -2124,7 +2129,7 @@ def conversar(
             "acciones": [],
         }
     acciones = _ajustar_pedir_documento(
-        _acciones_validas(data.get("acciones"), modalidad), expediente
+        _acciones_validas(data.get("acciones"), modalidad, habilitadas), expediente
     )
     respuesta = _texto_plano_chat(str(data.get("respuesta") or ""))
     return {"respuesta": respuesta, "acciones": acciones}
@@ -2159,12 +2164,15 @@ def _texto_plano_chat(texto: str) -> str:
     return re.sub(r"\*\*(.+?)\*\*", r"\1", texto).replace("**", "").strip()
 
 
-def _acciones_validas(acciones: object, modalidad_actual: str | None) -> list[dict]:
+def _acciones_validas(
+    acciones: object, modalidad_actual: str | None, habilitadas: list[Modalidad]
+) -> list[dict]:
     """Descarta acciones mal formadas o con códigos fuera de catálogo."""
     from app.models.schemas import TipoContratacion
 
     salida: list[dict] = []
-    modalidades = {m.value for m in Modalidad}
+    # La modalidad que ya tiene el expediente sigue siendo válida.
+    modalidades = {m.value for m in habilitadas} | {modalidad_actual}
     tipos = {t.value for t in TipoContratacion}
     documentos = {t.value for t in TipoDocumento}
     for a in acciones if isinstance(acciones, list) else []:
@@ -2176,7 +2184,7 @@ def _acciones_validas(acciones: object, modalidad_actual: str | None) -> list[di
             for campo in ("nomenclatura", "nombre"):
                 if a.get(campo):
                     limpio[campo] = str(a[campo]).strip()[:200]
-            if a.get("modalidad") in modalidades:
+            if a.get("modalidad") and a["modalidad"] in modalidades:
                 limpio["modalidad"] = a["modalidad"]
             if a.get("tipo_contratacion") in tipos:
                 limpio["tipo_contratacion"] = a["tipo_contratacion"]
