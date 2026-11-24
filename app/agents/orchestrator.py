@@ -630,7 +630,7 @@ def procesar_mensaje(sesion_id: str, mensaje: str) -> tuple[SesionCompliance, st
                         "Bienvenido al Módulo de Compliance de Contrataciones Públicas. "
                         "Soy el Coordinador de Compliance y estoy aquí para guiarte "
                         "en el proceso de auditoría. "
-                        "Para comenzar, indícame la nomenclatura del expediente."
+                        "Para comenzar, indícame el número del expediente."
                     )
     else:
         # Jurídico tiene prioridad sobre Q&A si el mensaje es un pedido explícito

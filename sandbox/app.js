@@ -267,7 +267,7 @@ async function decir(texto, extra) {
 function saludo() {
   return `Hola, ${usuario.nombre}. Soy el Coordinador de Compliance de Contrataciones. ` +
     "Te acompaño a auditar un expediente documento por documento, y puedes preguntarme lo que necesites en el camino.\n\n" +
-    "Para empezar, ¿cuál es la nomenclatura del expediente? Por ejemplo: CA-SDEDTEOEL-CA-002-2026.";
+    "Para empezar, ¿cuál es el número del expediente? Por ejemplo: CA-SDEDTEOEL-CA-002-2026.";
 }
 
 // ---------- Flujo guiado ----------
@@ -380,7 +380,7 @@ async function elegirTipo(valor) {
   actualizarPaso(e);
   const m = modalidadDe(e);
   await decir(`Perfecto: ${m.nombre}, ${t.nombre.toLowerCase()}. El checklist tiene ${m.checklist.length} documentos; ` +
-    "ya puedes cargarlos en el orden que prefieras desde la lista de la derecha.");
+    `se cargan en el orden de la lista de la derecha. Empieza por: ${m.checklist[0].nombre}.`);
 }
 
 let tipoParaSubir = null;
@@ -566,7 +566,7 @@ function pintarAcciones() {
   $("form-texto").hidden = !e || ocupado;
   if (!e || ocupado) return;
   $("in-texto").placeholder = e.paso === "nomenclatura"
-    ? "Escribe la nomenclatura del expediente, o pregúntame lo que necesites"
+    ? "Escribe el número del expediente, o pregúntame lo que necesites"
     : "Escribe tu mensaje";
   $("in-texto").focus();
 

@@ -2023,6 +2023,7 @@ def conversar(
     mapeo = "\n".join(f"- {etiqueta_modalidad(m)} → {m.value}" for m in Modalidad)
     modalidad = expediente.get("modalidad")
     checklist_txt = "(se define al elegir la modalidad)"
+    siguiente_txt = "(se define al elegir la modalidad)"
     if modalidad:
         validos = {
             js.get("tipo_documento")
@@ -2035,33 +2036,43 @@ def conversar(
             + ("analizado" if s.tipo_documento.value in validos else "pendiente")
             for s in slots
         )
+        pendiente = next((s for s in slots if s.tipo_documento.value not in validos), None)
+        siguiente_txt = (
+            f"{pendiente.tipo_documento.value} "
+            f"({pendiente.descripcion or etiqueta_documento(pendiente.tipo_documento)})"
+            if pendiente
+            else "ninguno: están todos; ofrece el dictamen final"
+        )
     system = (
         f"{_ORQUESTADOR_IDENTIDAD}\n"
         f"{_DOMINIO_COMPLIANCE}\n"
         "Conversas con el usuario por chat. Tu misión: registrar el expediente "
-        "(nomenclatura, modalidad y tipo de contratación), explicar los resultados "
-        "de los documentos y ofrecer el dictamen cuando corresponda. El usuario "
-        "decide qué documentos sube y en qué orden.\n"
+        "(número de expediente, modalidad y tipo de contratación), explicar los "
+        "resultados de los documentos y ofrecer el dictamen cuando corresponda. "
+        "Los documentos se cargan en el orden del CHECKLIST.\n"
         f"Usuario: {usuario_nombre or 'sin nombre'}; ente de su cuenta: {ente or 'sin ente'}. "
         "El expediente puede ser de ese ente, de otro organismo o de una empresa: "
         "no lo cuestiones. Trátalo por su nombre de vez en cuando, sin exagerar.\n"
         f"Modalidades (códigos para el JSON, nunca en la respuesta):\n{mapeo}\n"
         "Tipos: BIENES, OBRAS, SERVICIOS.\n"
         "REGLAS:\n"
-        "- Registro: pide solo los datos que falten en EXPEDIENTE (nomenclatura, "
-        "modalidad, tipo), de uno en uno. Si un dato ya tiene valor, no lo "
+        "- Registro: pide solo los datos que falten en EXPEDIENTE (número de "
+        "expediente, modalidad, tipo), de uno en uno. Al usuario llámalo siempre "
+        "«número de expediente», nunca «nomenclatura» (en el JSON el campo sigue "
+        "siendo nomenclatura). Si un dato ya tiene valor, no lo "
         "preguntes ni lo confirmes de nuevo. No preguntes el nombre ni la "
         "descripción del proceso; si el usuario lo menciona, guárdalo en "
         "fijar_expediente.nombre.\n"
-        "- Cuando el registro quede completo, confírmalo y dile que ya puede "
-        "cargar los documentos del expediente en el orden que prefiera con el "
-        "botón de carga de la pantalla. No le digas cuál subir primero.\n"
+        "- Cuando el registro quede completo, confírmalo en una o dos frases. No "
+        "nombres ningún documento: la pantalla le indica cuál subir primero.\n"
         "- Los archivos se suben con el botón de carga de la pantalla; tú no "
         "recibes archivos por el chat.\n"
-        "- No le indiques al usuario qué documento subir ni cuál sigue. Solo si "
-        "pregunta qué le falta o cuál conviene subir, responde con los pendientes "
-        "del CHECKLIST y, si sugieres uno, emite pedir_documento con su código. "
-        "Nunca menciones documentos que no estén en el checklist.\n"
+        "- Si el usuario pregunta qué sigue o cuál subir, responde con el documento "
+        "SIGUIENTE (el primer pendiente del CHECKLIST, en su orden) y emite "
+        "pedir_documento con su código. Si pregunta qué le falta, lista los "
+        "pendientes en el orden del CHECKLIST empezando por el SIGUIENTE. No "
+        "propongas otro orden. Nunca menciones documentos que no estén en el "
+        "checklist.\n"
         "- Para explicar un resultado usa solo los hallazgos del bloque DOCUMENTOS: "
         "explica en palabras simples qué falló y por qué importa. No copies el texto "
         "de las preguntas del cuestionario.\n"
@@ -2090,7 +2101,8 @@ def conversar(
         f"nomenclatura={expediente.get('nomenclatura')!r}, nombre={expediente.get('nombre')!r}, "
         f"modalidad={modalidad!r}, tipo={expediente.get('tipo_contratacion')!r}, "
         f"dictámenes emitidos={expediente.get('dictamenes') or 0}.\n"
-        f"CHECKLIST:\n{checklist_txt}\n"
+        f"CHECKLIST (en orden):\n{checklist_txt}\n"
+        f"SIGUIENTE: {siguiente_txt}\n"
         f"DOCUMENTOS:\n{_resumen_documentos_chat(expediente.get('documentos') or [])}\n"
         f"{kb}\n"
         f"HISTORIAL:\n{historial_txt or '(vacío)'}\n\n"
@@ -2120,7 +2132,7 @@ def conversar(
 
 def _ajustar_pedir_documento(acciones: list[dict], expediente: dict) -> list[dict]:
     """pedir_documento solo con documentos del checklist, y nunca en el mensaje que
-    completa el registro: el usuario elige qué documento sube."""
+    completa el registro: ese aviso lo da la pantalla."""
     from app.agents.modalities import get_modalidad_agent
     from app.models.schemas import TipoContratacion
 
