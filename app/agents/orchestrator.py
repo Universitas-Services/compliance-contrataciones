@@ -440,7 +440,7 @@ def ejecutar_dictamen_juridico(
         markdown=markdown,
         slots_pendientes=list(pendientes),
         puntaje=puntaje.a_dict(),
-        coherencia=contradicciones,
+        coherencia=contradicciones or [],
     )
     sesion.dictamenes_juridicos.append(dictamen)
     etiqueta = "final" if alcance == AlcanceDictamen.FINAL else "parcial"

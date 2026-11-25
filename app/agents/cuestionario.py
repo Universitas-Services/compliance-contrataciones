@@ -350,6 +350,34 @@ def _recortar_en_palabra(texto: str, n: int) -> str:
     return corte.rstrip(" ,;:(") + "…"
 
 
+def _limpiar_md(texto: str | None) -> str:
+    r"""Quita restos de Markdown de los .md («**», «77\. 3») y normaliza paréntesis."""
+    t = re.sub(r"\\([^\w\s])", r"\1", (texto or "").replace("**", ""))
+    t = re.sub(r"\(\s+", "(", t)
+    return re.sub(r"\.\(", ". (", t).strip()
+
+
+def _recortar_en_frase(texto: str, n: int) -> str:
+    """Recorta a ≤ n caracteres en fin de frase; sin frase completa, en palabra."""
+    if len(texto) <= n:
+        return texto
+    fin = texto[:n].rfind(". ")
+    return texto[: fin + 1] if fin > 0 else _recortar_en_palabra(texto, n)
+
+
+def _con_punto(texto: str) -> str:
+    """Cierra la frase con punto, sin duplicarlo tras «…»."""
+    t = texto.rstrip().rstrip(".")
+    return t if t.endswith("…") else f"{t}."
+
+
+def _criticidad_uniforme(rango: str | None) -> str:
+    """«RELEVANTE (3)», «CRÍTICO 5.» → «RELEVANTE: 3», «CRÍTICO: 5»."""
+    t = _limpiar_md(rango)
+    m = re.match(r"(CR[IÍ]TIC[OA]|RELEVANTE|ORDINARI[OA])\W*(\d)", t, flags=re.IGNORECASE)
+    return f"{m.group(1)}: {m.group(2)}" if m else (t or "N/D")
+
+
 def _fundamento_corto(fundamento: str | None) -> str:
     """Cita breve para el informe de usuario («Art. 67 LCP; Art. 23 Normas SUNAI»).
 
@@ -390,6 +418,11 @@ def construir_informe_usuario_markdown(
             "grave que requiere atención inmediata"
         ),
     }.get(estatus_global, "corresponde revisar el detalle de hallazgos")
+    if estatus_global == "Amarillo" and any(_es_critico(p.rango_criticidad) for p in hallazgos):
+        explicacion = (
+            "hay al menos un punto crítico que no consta en este documento y "
+            "debe verificarse en el resto del expediente"
+        )
 
     partes: list[str] = [
         (
@@ -435,36 +468,34 @@ def construir_informe_usuario_markdown(
             grado = {
                 "no": "incumplimiento",
                 "parcial": "cumplimiento parcial",
-                "no_consta": (
-                    "que no consta en este documento (verificar en el resto "
-                    "del expediente)"
-                ),
             }.get(est, "observación")
             cuerpo = (p.respuesta or "").strip().rstrip(".")
             if not cuerpo or cuerpo.lower().startswith("estado:"):
                 cuerpo = "No se constató el cumplimiento del control requerido"
-            cuerpo = _recortar_en_palabra(cuerpo, 220)
+            cuerpo = _recortar_en_frase(cuerpo, 400)
             fund = _fundamento_corto(p.fundamento_legal)
-            crit = (p.rango_criticidad or "N/D").strip()
-            # «( incumplimiento …)» viene así de los .md: normalizar el paréntesis.
-            accion = re.sub(r"\(\s+", "(", (p.accion_legal or "").strip())
-            adv = re.sub(r"\(\s+", "(", (p.advertencia_gerencia or "").strip())
-            ref = (p.ref or "").strip()
+            crit = _criticidad_uniforme(p.rango_criticidad)
+            accion = _limpiar_md(p.accion_legal)
+            adv = _limpiar_md(p.advertencia_gerencia)
+            # Lo que no consta no tiene evidencia que citar.
+            ref = "" if est == "no_consta" else (p.ref or "").strip().strip("[]")
 
             cuerpo = cuerpo.rstrip(".")
             fund = fund.rstrip(".")
             bloque = (
-                f"Hallazgo {i} ({cod + ', ' if con_codigos else ''}criticidad {crit}): se observa "
-                f"{grado}. {cuerpo}{'' if cuerpo.endswith('…') else '.'}"
+                f"Hallazgo {i} ({cod + ', ' if con_codigos else ''}criticidad {crit}): "
+                + (
+                    _con_punto(f"{cuerpo} (verificar en el resto del expediente)")
+                    if est == "no_consta"
+                    else f"se observa {grado}. {_con_punto(cuerpo)}"
+                )
             )
             if fund:
                 bloque += f" Fundamento: {fund}."
             if accion:
-                accion = _recortar_en_palabra(accion, 220)
-                bloque += f" Acción recomendada: {accion.rstrip('.')}."
+                bloque += f" Acción recomendada: {_con_punto(_recortar_en_frase(accion, 600))}"
             if adv:
-                adv = _recortar_en_palabra(adv, 180)
-                bloque += f" Advertencia a la gerencia: {adv.rstrip('.')}."
+                bloque += f" Advertencia a la gerencia: {_con_punto(_recortar_en_frase(adv, 600))}"
             if ref and ref.lower() != "null":
                 bloque += f" Evidencia: {ref}."
             partes.append(bloque)

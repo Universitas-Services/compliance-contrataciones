@@ -658,6 +658,7 @@ def _llamar_modelo(
     timeout: float | None = None,
     temperature: float | None = None,
     reasoning_effort: str | None = None,
+    reintentos_sdk: int | None = None,
 ) -> str:
     text, _finish = _llamar_modelo_meta(
         system=system,
@@ -666,6 +667,7 @@ def _llamar_modelo(
         timeout=timeout,
         temperature=temperature,
         reasoning_effort=reasoning_effort,
+        reintentos_sdk=reintentos_sdk,
     )
     return text
 
@@ -682,6 +684,7 @@ def _llamar_modelo_meta(
     timeout: float | None = None,
     temperature: float | None = None,
     reasoning_effort: str | None = None,
+    reintentos_sdk: int | None = None,
 ) -> tuple[str, str | None]:
     messages = [
         {"role": "system", "content": system},
@@ -700,8 +703,11 @@ def _llamar_modelo_meta(
     prioridad = False
     while True:
         try:
+            cliente = _client()
+            if reintentos_sdk is not None:
+                cliente = cliente.with_options(max_retries=reintentos_sdk)
             resultado = _chat_create(
-                _client(),
+                cliente,
                 model=_model(),
                 messages=messages,
                 max_tokens=max_tokens,
@@ -2021,6 +2027,9 @@ def conversar(
     from app.agents.modalities import get_modalidad_agent
     from app.models.schemas import TipoContratacion
 
+    nombre = (usuario_nombre or "").strip()
+    if nombre.islower():
+        nombre = nombre.title()
     habilitadas = list(modalidades_habilitadas or Modalidad)
     mapeo = "\n".join(f"- {etiqueta_modalidad(m)} → {m.value}" for m in habilitadas)
     modalidad = expediente.get("modalidad")
@@ -2052,9 +2061,10 @@ def conversar(
         "(número de expediente, modalidad y tipo de contratación), explicar los "
         "resultados de los documentos y ofrecer el dictamen cuando corresponda. "
         "Los documentos se cargan en el orden del CHECKLIST.\n"
-        f"Usuario: {usuario_nombre or 'sin nombre'}; ente de su cuenta: {ente or 'sin ente'}. "
+        f"Usuario: {nombre or 'sin nombre'}; ente de su cuenta: {ente or 'sin ente'}. "
         "El expediente puede ser de ese ente, de otro organismo o de una empresa: "
-        "no lo cuestiones. Trátalo por su nombre de vez en cuando, sin exagerar.\n"
+        "no lo cuestiones. Llámale por su nombre de vez en cuando, sin exagerar. "
+        "No supongas su género: nada de «señor», «señora», «bienvenido» ni similares.\n"
         f"Modalidades (códigos para el JSON, nunca en la respuesta):\n{mapeo}\n"
         "Tipos: BIENES, OBRAS, SERVICIOS.\n"
         "REGLAS:\n"
@@ -2197,11 +2207,12 @@ def _acciones_validas(
     return salida
 
 
-def verificar_coherencia(docs: list) -> list[dict]:
+def verificar_coherencia(docs: list) -> list[dict] | None:
     """Contradicciones de montos, plazos, partes o nomenclatura entre documentos.
 
     Llamada corta y aparte del dictamen: el análisis sin estado no ve el resto
     del expediente, y dentro del dictamen el Jurídico pasa por alto el cruce.
+    None = no se pudo verificar (el modelo no respondió en ninguna pasada).
     """
     from app.agents.knowledge import etiqueta_documento
 
@@ -2234,7 +2245,10 @@ def verificar_coherencia(docs: list) -> list[dict]:
     # Dos pasadas en paralelo y se unen: una sola encontraba las contradicciones
     # sutiles en 2 de cada 3 corridas (9/11).
     with ThreadPoolExecutor(max_workers=_PASADAS_COHERENCIA) as ex:
-        pasadas = list(ex.map(lambda _: _una_pasada_coherencia(system, user), range(_PASADAS_COHERENCIA)))
+        resultados = list(ex.map(lambda _: _una_pasada_coherencia(system, user), range(_PASADAS_COHERENCIA)))
+    pasadas = [p for p in resultados if p is not None]
+    if not pasadas:
+        return None
     # Una misma contradicción vuelve con otras palabras: se descarta si repite
     # el dato (p. ej. «nomenclatura del procedimiento») o los mismos dos valores.
     unidas: list[dict] = []
@@ -2252,6 +2266,8 @@ def verificar_coherencia(docs: list) -> list[dict]:
 
 
 _PASADAS_COHERENCIA = max(1, int(os.getenv("LLM_PASADAS_COHERENCIA", "2")))
+# Llamadas cortas (lo normal son segundos): no deben retrasar el dictamen.
+_TIMEOUT_COHERENCIA_S = 25.0
 
 
 def _normalizar_valor(valor: str) -> str:
@@ -2259,19 +2275,27 @@ def _normalizar_valor(valor: str) -> str:
     return re.sub(r"[^0-9a-z]", "", str(valor).lower().replace("ves", "").replace("bs", ""))
 
 
-def _una_pasada_coherencia(system: str, user: str) -> list[dict]:
+def _una_pasada_coherencia(system: str, user: str) -> list[dict] | None:
     data = None
     for _ in range(2):  # un reintento si el JSON llega cortado
         try:
             raw = _llamar_modelo(
-                system=system, user_content=user, max_tokens=8192, reasoning_effort="low"
+                system=system,
+                user_content=user,
+                max_tokens=8192,
+                reasoning_effort="low",
+                timeout=_TIMEOUT_COHERENCIA_S,
+                reintentos_sdk=1,
             )
             data = _limpiar_y_parsear_json(raw)
             break
         except (json.JSONDecodeError, TypeError, ValueError) as exc:
             logger.warning("verificar_coherencia: respuesta inválida (%s)", exc)
+        except (APIError, RuntimeError) as exc:
+            logger.warning("verificar_coherencia: pasada omitida (%s)", _resumen_error_llm(exc))
+            return None
     if data is None:
-        return []
+        return None
     lista = data.get("contradicciones") if isinstance(data, dict) else None
     campos = ("dato", "documento_a", "valor_a", "documento_b", "valor_b", "gravedad", "explicacion")
     return [
@@ -2281,8 +2305,13 @@ def _una_pasada_coherencia(system: str, user: str) -> list[dict]:
     ]
 
 
-def bloque_coherencia(contradicciones: list[dict]) -> str:
+def bloque_coherencia(contradicciones: list[dict] | None) -> str:
     """Bloque para el Jurídico con las contradicciones ya verificadas."""
+    if contradicciones is None:
+        return (
+            "CONTRADICCIONES ENTRE DOCUMENTOS: no se pudieron verificar en esta "
+            "corrida; no afirmes que no existen."
+        )
     if not contradicciones:
         return (
             "CONTRADICCIONES ENTRE DOCUMENTOS (verificadas por el sistema): "
@@ -2458,6 +2487,7 @@ def consultar_juridico(
         "Si el bloque «CONTRADICCIONES ENTRE DOCUMENTOS» trae alguna, es "
         "OBLIGATORIO incluirlas en la sección 3, en un párrafo propio, citando "
         "ambos documentos y ambos valores; no agregues otras. "
+        "Escribe «número de expediente», nunca «nomenclatura». "
         "OBLIGATORIO: termina la sección 4 con una frase completa; no cortes a media idea.\n"
         f"{kb_jur}"
     )
